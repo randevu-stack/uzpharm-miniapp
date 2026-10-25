@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Предельные цены на лекарства</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <section id="list-view">
+      <header class="top">
+        <h1>Предельные цены</h1>
+        <p class="muted" id="updated">Реестр Минздрава РУз</p>
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Название лекарства" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" enterkeyhint="search" aria-label="Название лекарства" disabled>
+        </label>
+      </header>
+      <p id="status" class="status" role="status">Загружаю реестр…</p>
+      <ul id="results" class="list"></ul>
+    </section>
+    <section id="card-view" hidden></section>
+  </main>
+  <script src="search.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
