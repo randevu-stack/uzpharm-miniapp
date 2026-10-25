@@ -130,7 +130,7 @@
     return { items: scored.slice(0, limit).map((p) => p[1]), exact: false, total: Math.min(scored.length, limit) };
   }
 
-  const api = { normalize, search, sim, prepare: index };
+  const api = { normalize, search, sim, prepare: index, prio };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.UzSearch = api;
 })(typeof window !== "undefined" ? window : globalThis);

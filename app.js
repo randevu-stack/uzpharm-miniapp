@@ -350,8 +350,10 @@
         retail ? el("span", { class: "sum", text: sum(retail) }) : el("span", { class: "sum none", text: "цена не установлена" })));
     }
 
+    // аналоги: сначала Jurabek Laboratories, затем дешевле, затем по названию
     const analogs = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id)
-      .sort((a, b) => (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
+      .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b)
+        || (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
 
     cardBody.replaceChildren(
       head,
