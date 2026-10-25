@@ -19,7 +19,7 @@
   const cardView = $("card-view"), cardBody = $("card");
   const tabs = { search: $("tab-search"), fav: $("tab-fav"), profile: $("tab-profile") };
 
-  let drugs = [], byId = new Map(), byInn = new Map(), updated = "";
+  let drugs = [], byId = new Map(), byInn = new Map(), updated = "", refDate = "";
   let tab = "search";
   const tabScroll = { search: 0, fav: 0, profile: 0 };
 
@@ -109,7 +109,7 @@
         const d = {
           id: a[f.id], trade: a[f.name], inn: a[f.inn], form: a[f.form], dosage: a[f.dosage], maker: a[f.maker],
           rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: a[f.expires], photo: a[f.photo], level: a[f.level],
-          prices: a[f.prices],
+          prices: a[f.prices], agency: !!a[f.agency],
         };
         // поля для search.js — как search_content в базе бота
         d.text = UzSearch.normalize([d.trade, d.inn].filter(Boolean).join(" "));
@@ -127,6 +127,7 @@
         byInn.get(d.innKey).push(d);
       }
       updated = data.updated;
+      refDate = data.refDate || "";
       $("updated").textContent = `Реестр Минздрава РУз от ${date(updated)} · ${drugs.length.toLocaleString("ru-RU")} препаратов`;
       input.disabled = false;
       if (!inTelegram) input.focus();
@@ -321,6 +322,8 @@
         el("div", { class: "pf-group" },
           pfRow(ICO.data, `Реестр от ${date(updated)}`, { sub: `${drugs.length.toLocaleString("ru-RU")} препаратов с действующей регистрацией` }),
           pfRow(ICO.globe, "uzpharm-control.uz", { onclick: () => openLink("https://uzpharm-control.uz/"), sub: "Официальный реестр Минздрава РУз" }),
+          refDate ? pfRow(ICO.globe, "uzpharmagency.uz", { onclick: () => openLink("https://uzpharmagency.uz/ru/reference-prices"),
+            sub: `Реестр референтных цен Агентства от ${date(refDate)}` }) : null,
           pfRow(ICO.info, "Что такое предельная цена", { sub: "Аптека не вправе продавать дороже. Если цена не установлена, ограничения нет." }))),
 
       el("p", { class: "source", text: "Справочная информация. Перед применением лекарства проконсультируйтесь с врачом." })));
@@ -403,7 +406,9 @@
       analogs.length ? el("section", { class: "block" },
         el("h3", { text: `Аналоги — то же вещество (${analogs.length})` }),
         el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a)))) : null,
-      el("p", { class: "source", text: `Источник: реестр uzpharm-control.uz, данные от ${date(updated)}` }));
+      el("p", { class: "source", text: d.agency
+        ? `Цены: реестр референтных цен Агентства (uzpharmagency.uz) от ${date(refDate)}. Карточка: реестр uzpharm-control.uz от ${date(updated)}`
+        : `Источник: реестр uzpharm-control.uz, данные от ${date(updated)}` }));
   }
 
   // ---------- вкладки ----------
