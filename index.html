@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Предельные цены на лекарства</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css?v=bf48b357">
+  <link rel="stylesheet" href="style.css?v=38712914">
 </head>
 <body>
   <main id="app">
-    <section id="list-view">
+    <!-- вкладка «Поиск» -->
+    <section id="tab-search" class="tab">
       <header class="top">
         <h1>Предельные цены</h1>
         <p class="muted" id="updated">Реестр Минздрава РУз</p>
@@ -25,6 +26,19 @@
       <p id="status" class="status" role="status">Загружаю реестр…</p>
       <ul id="results" class="list"></ul>
     </section>
+
+    <!-- вкладка «Избранное» -->
+    <section id="tab-fav" class="tab" hidden>
+      <header class="top"><h1>Избранное</h1></header>
+      <div id="fav-body"></div>
+    </section>
+
+    <!-- вкладка «Профиль» -->
+    <section id="tab-profile" class="tab" hidden>
+      <div id="profile-body"></div>
+    </section>
+
+    <!-- карточка препарата — поверх любой вкладки -->
     <section id="card-view" hidden>
       <header class="bar">
         <button id="back" class="back" type="button">
@@ -34,7 +48,26 @@
       <div id="card"></div>
     </section>
   </main>
+
+  <!-- нижние вкладки, как в Jurabekapp: парящая капсула -->
+  <nav class="bottom-nav" aria-label="Разделы">
+    <button class="nav-item active" type="button" data-tab="search" aria-current="page">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg></span>
+      Поиск
+    </button>
+    <button class="nav-item" type="button" data-tab="fav">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.3 6.6 20.3l1.1-6.1L3.2 9.9l6.1-.8L12 3.5z"/></svg></span>
+      Избранное
+    </button>
+    <button class="nav-item" type="button" data-tab="profile">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM4 22c.6-4.5 3.8-7 8-7s7.4 2.5 8 7H4z"/></svg></span>
+      Профиль
+    </button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <script src="search.js?v=edd33b4e"></script>
-  <script src="app.js?v=2fbdb81e"></script>
+  <script src="app.js?v=913831fa"></script>
 </body>
 </html>

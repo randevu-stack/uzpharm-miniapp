@@ -1,6 +1,7 @@
-/* Мини-апп «Предельные цены»: поиск по реестру, карточка с ценами и фото, аналоги по МНН.
-   Данные — data.json (собирает miniapp/build.py), поиск — search.js. Навигация через #/d/<id>,
-   чтобы работали кнопка «Назад» в Telegram и в браузере. */
+/* Мини-апп «Предельные цены»: поиск по реестру, карточка с ценами и фото, аналоги по МНН,
+   избранное и профиль (нижние вкладки — как в Jurabekapp).
+   Данные — data.json (собирает miniapp/build.py), поиск — search.js. Карточка открывается поверх вкладки
+   через history.pushState (#/d/<id>), чтобы работали «Назад» в Telegram, кнопка «‹ Назад» и свайп вправо. */
 (function () {
   "use strict";
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -8,22 +9,40 @@
   const HOTLINE_PHONE = "1003";
   const HOTLINE_TG = "uzpharmcontrol";
   const NO_INN = /^отсутствует утвержд[её]нное мнн$/i;
-  const EXAMPLES =["Парацетамол", "Анальгин", "Цитрамон", "Амоксициллин", "Дротаверин"];   // все есть в реестре
+  const EXAMPLES = ["Парацетамол", "Анальгин", "Цитрамон", "Амоксициллин", "Дротаверин"];   // все есть в реестре
+  const FAV_CLOUD = "favs";          // ключ в Telegram CloudStorage: {v: [id…], t: время изменения}
+  const FAV_MAX = 300;               // значение в CloudStorage — до 4096 символов, id ~6 символов
+  const VIEWED_MAX = 30;
 
   const $ = (id) => document.getElementById(id);
   const input = $("q"), statusEl = $("status"), results = $("results"), clearBtn = $("clear");
   const cardView = $("card-view"), cardBody = $("card");
+  const tabs = { search: $("tab-search"), fav: $("tab-fav"), profile: $("tab-profile") };
 
   let drugs = [], byId = new Map(), byInn = new Map(), updated = "";
+  let tab = "search";
+  const tabScroll = { search: 0, fav: 0, profile: 0 };
+
+  // ---------- хранилище в телефоне: всегда через try — в приватном режиме оно может не работать ----------
+  const store = {
+    get(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* без сохранения */ } },
+  };
+  let favs = store.get("favIds", []);            // id карточек, последние добавленные — первыми
+  let viewed = store.get("viewedIds", []);
 
   if (tg) {
     tg.ready();
     tg.expand();
     if (inTelegram) document.documentElement.classList.add("tg");
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();   // как в Jurabekapp: прокрутка вниз не сворачивает приложение
-    // кнопка «Назад» Telegram (и системный жест «назад» на Android): из карточки — к списку, из поиска — очистить запрос
-    tg.BackButton.onClick(() => (cardView.hidden ? clearSearch() : goBack()));
+    // кнопка «Назад» Telegram (и системный жест «назад» на Android): из карточки — назад, в поиске — очистить запрос
+    tg.BackButton.onClick(() => {
+      if (!cardView.hidden) goBack();
+      else if (tab === "search" && input.value) clearSearch();
+    });
   }
+  if (store.get("bigFont", false)) document.body.classList.add("big-font");
 
   // ---------- маленькие помощники: только textContent, никакого innerHTML с данными реестра ----------
   function el(tag, props, ...children) {
@@ -37,20 +56,46 @@
     for (const c of children) if (c != null && c !== false) n.append(c);
     return n;
   }
+  function svg(markup) {                          // только наши собственные иконки из констант ниже
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.setAttribute("aria-hidden", "true");
+    s.innerHTML = markup;
+    return s;
+  }
+  const ICO = {
+    pill: '<rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="m9.2 7.9 5.6 8.2"/>',
+    star: '<path d="M12 3.5l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.3 6.6 20.3l1.1-6.1L3.2 9.9l6.1-.8L12 3.5z"/>',
+    phone: '<path d="M6.6 3h3l1.5 4.5-2 1.3a12 12 0 0 0 6.1 6.1l1.3-2L21 14.4v3A2.6 2.6 0 0 1 18.4 20 15.4 15.4 0 0 1 4 5.6 2.6 2.6 0 0 1 6.6 3z"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+    font: '<path d="M4 19 9.5 5h1L16 19M6.3 14h7.4M15 19l3-8 3 8M16 16.5h4"/>',
+    data: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.6 5.7 3.6 9s-1.1 6.3-3.6 9c-2.5-2.7-3.6-5.7-3.6-9S9.5 5.7 12 3z"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  };
   const sum = (x) => Math.round(x).toLocaleString("ru-RU").replace(/ /g, " ") + " сум";
   const date = (s) => (s && s.length >= 10 ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : "—");
   const minPrice = (d) => d.prices.reduce((m, p) => (p[1] && (m == null || p[1] < m) ? p[1] : m), null);
-  const pillIcon = () => {
-    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    s.setAttribute("viewBox", "0 0 24 24");
-    s.innerHTML = '<rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="m9.2 7.9 5.6 8.2"/>';
-    return s;
+  const plural = (n, one, few, many) => {
+    const m10 = n % 10, m100 = n % 100;
+    return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many;
   };
   function thumb(d) {
-    if (!d.photo) return el("span", { class: "thumb none", "aria-hidden": "true" }, pillIcon());
+    if (!d.photo) return el("span", { class: "thumb none" }, svg(ICO.pill));
     const t = el("span", { class: "thumb", role: "img", "aria-label": "Фото упаковки" });
     t.style.backgroundImage = `url("photos/${d.photo}")`;
     return t;
+  }
+  let toastTimer;
+  function toast(text) {
+    const t = $("toast");
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  }
+  function haptic() {
+    try { if (inTelegram && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) { /* старый клиент */ }
   }
 
   // ---------- данные ----------
@@ -86,23 +131,35 @@
       input.disabled = false;
       if (!inTelegram) input.focus();
       route();
+      pullFavs();
     } catch (e) {
       statusEl.textContent = "Не удалось загрузить реестр. Проверьте интернет и откройте снова.";
       statusEl.classList.add("warn");
     }
   }
 
-  // ---------- список ----------
+  // ---------- строки списков ----------
+  function row(d, withStar) {
+    const p = minPrice(d);
+    const sub = [d.dosage, d.maker].filter(Boolean).join(" · ");
+    const item = el("button", { class: "item", type: "button", onclick: () => open(d.id) },
+      thumb(d),
+      el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }), el("span", { class: "item-sub", text: sub })),
+      el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null, p ? "не дороже" : "цена не уст."));
+    return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
+  }
+
+  // ---------- вкладка «Поиск» ----------
   function renderList() {
     const q = input.value;
     results.replaceChildren();
     statusEl.classList.remove("warn");
-    const old = document.querySelector(".chips");
+    const old = tabs.search.querySelector(".chips");
     if (old) old.remove();
     if (UzSearch.normalize(q).replace(/ /g, "").length < 3) {
       statusEl.textContent = "Напишите хотя бы 3 буквы. Можно латиницей и с опечатками.";
       const chips = el("ul", { class: "chips" }, ...EXAMPLES.map((x) =>
-        el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncClear(); renderList(); } }))));
+        el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
       statusEl.after(chips);
       return;
     }
@@ -114,31 +171,197 @@
     statusEl.textContent = !exact ? "Точно не нашёл. Возможно, вы искали:"
       : total > items.length ? `Найдено: ${total}, показаны первые ${items.length} — уточните запрос` : `Найдено: ${total}`;
     if (!exact) statusEl.classList.add("warn");
-    results.append(...items.map(row));
+    results.append(...items.map((d) => row(d)));
   }
 
-  function row(d) {
-    const p = minPrice(d);
-    const sub = [d.dosage, d.maker].filter(Boolean).join(" · ");
-    return el("li", null, el("button", { class: "item", type: "button", onclick: () => open(d.id) },
-      thumb(d),
-      el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }), el("span", { class: "item-sub", text: sub })),
-      el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null, p ? "не дороже" : "цена не уст.")));
+  // ---------- избранное: телефон + облако Telegram, синхронизация как в Jurabekapp ----------
+  const isFav = (id) => favs.includes(id);
+  function cloudOk() {
+    try { return inTelegram && !!tg.CloudStorage && tg.isVersionAtLeast("6.9"); } catch (e) { return false; }
+  }
+  function saveFavs(at) {
+    store.set("favIds", favs);
+    store.set("favAt", at);
+  }
+  function pushFavs(at) {
+    if (!cloudOk()) return;
+    try {
+      tg.CloudStorage.setItem(FAV_CLOUD, JSON.stringify({ v: favs.slice(0, FAV_MAX), t: at }), () => {});
+      store.set("favSynced", true);
+    } catch (e) { /* без облака избранное всё равно живёт в телефоне */ }
+  }
+  function pullFavs() {
+    if (!cloudOk()) return;
+    try {
+      tg.CloudStorage.getItem(FAV_CLOUD, (err, val) => {
+        if (err) return;
+        let cloud = null;
+        try {
+          const c = JSON.parse(val || "null");
+          if (c && Array.isArray(c.v)) cloud = { v: c.v.filter(Number.isInteger), t: +c.t || 0 };
+        } catch (e) { /* испорченное значение — перезапишем своим */ }
+        const localAt = store.get("favAt", 0);
+        if (!cloud) return pushFavs(localAt || Date.now());          // в облаке пусто — кладём своё
+        if (!store.get("favSynced", false)) {                         // первая встреча этого телефона с облаком — объединяем
+          favs = favs.concat(cloud.v.filter((id) => !isFav(id))).slice(0, FAV_MAX);
+          const at = Date.now();
+          saveFavs(at);
+          pushFavs(at);
+          return favsChanged();
+        }
+        if (cloud.t > localAt) {                                      // на другом устройстве изменили позже
+          favs = cloud.v;
+          saveFavs(cloud.t);
+          favsChanged();
+        } else if (localAt > cloud.t) {                               // здесь новее — обновляем облако
+          pushFavs(localAt);
+        }
+      });
+    } catch (e) { /* старый клиент Telegram */ }
+  }
+  function favsChanged() {
+    document.querySelectorAll(".fav-btn").forEach((b) => setFavState(b, isFav(Number(b.dataset.id))));
+    if (tab === "fav") renderFav();
+    if (tab === "profile") renderProfile();
+  }
+  function setFavState(btn, on) {
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on ? "Убрать из избранного" : "В избранное");
+  }
+  function toggleFav(id) {
+    const adding = !isFav(id);
+    favs = adding ? [id, ...favs].slice(0, FAV_MAX) : favs.filter((x) => x !== id);
+    const at = Date.now();
+    saveFavs(at);
+    pushFavs(at);
+    haptic();
+    toast(adding ? "Добавлено в избранное" : "Убрано из избранного");
+    document.querySelectorAll(".fav-btn").forEach((b) => { if (Number(b.dataset.id) === id) setFavState(b, adding); });
+  }
+  function favButton(d, cls) {
+    const b = el("button", { class: `fav-btn ${cls || ""}`, type: "button", "data-id": String(d.id),
+      onclick: (e) => { e.stopPropagation(); toggleFav(d.id); } }, svg(ICO.star));
+    setFavState(b, isFav(d.id));
+    return b;
+  }
+
+  function renderFav() {
+    const list = favs.map((id) => byId.get(id)).filter(Boolean);   // карточка могла уйти из реестра
+    const body = $("fav-body");
+    if (!list.length) {
+      body.replaceChildren(el("div", { class: "empty" },
+        el("span", { class: "empty-ico" }, svg(ICO.star)),
+        el("p", { class: "empty-title", text: "Здесь будут ваши препараты" }),
+        el("p", { class: "muted", text: "Нажмите на звёздочку в карточке препарата, чтобы быстро возвращаться к его цене." }),
+        el("button", { class: "btn", type: "button", text: "Найти препарат", onclick: () => setTab("search") })));
+      return;
+    }
+    body.replaceChildren(
+      el("p", { class: "status", text: `${list.length} ${plural(list.length, "препарат", "препарата", "препаратов")}` }),
+      el("ul", { class: "list" }, ...list.map((d) => row(d, true))));
+  }
+
+  // ---------- вкладка «Профиль» ----------
+  function pfRow(icon, text, opts) {
+    opts = opts || {};
+    const tag = opts.href ? "a" : opts.onclick ? "button" : "div";      // строка без действия — просто текст
+    const props = { class: "pf-row" + (opts.quiet ? " quiet" : "") + (tag === "div" ? " static" : "") };
+    if (opts.href) props.href = opts.href;
+    if (tag === "button") props.type = "button";
+    if (opts.onclick) props.onclick = opts.onclick;
+    return el(tag, props,
+      icon ? el("span", { class: "pf-ico" }, svg(icon)) : null,
+      el("span", { class: "pf-text" }, text, opts.sub ? el("small", { class: "pf-sub", text: opts.sub }) : null),
+      opts.right || ((opts.href || opts.onclick) && !opts.quiet ? el("span", { class: "pf-chev", text: "›" }) : null));
+  }
+  function renderProfile() {
+    const u = (inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.user) || {};
+    const userName = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Гость";
+    const avatar = el("div", { class: "pf-avatar", text: userName.charAt(0).toUpperCase() });
+    if (/^https:\/\//.test(u.photo_url || "")) {
+      const img = el("img", { src: u.photo_url, alt: "", referrerpolicy: "no-referrer" });
+      img.onerror = () => img.remove();             // фото не загрузилось — остаётся первая буква
+      avatar.append(img);
+    }
+    const nFav = favs.filter((id) => byId.has(id)).length;
+    const seen = viewed.map((id) => byId.get(id)).filter(Boolean);
+
+    const bigOn = document.body.classList.contains("big-font");
+    const sw = el("span", { class: "switch" + (bigOn ? " on" : ""), role: "switch", "aria-checked": String(bigOn) });
+
+    $("profile-body").replaceChildren(el("div", { class: "pf" },
+      el("div", { class: "pf-head" }, avatar,
+        el("div", null, el("div", { class: "pf-name", text: userName }),
+          el("div", { class: "pf-role", text: u.username ? `@${u.username}` : "Пользователь UzPharm" }))),
+
+      el("div", { class: "pf-stats" },
+        el("button", { class: "pf-stat", type: "button", onclick: () => setTab("fav") },
+          el("b", { text: String(nFav) }), el("span", { text: "В избранном" })),
+        el("button", { class: "pf-stat", type: "button", onclick: () => $("pf-history").scrollIntoView({ behavior: "smooth" }) },
+          el("b", { text: String(seen.length) }), el("span", { text: "Просмотрено" }))),
+
+      el("div", { id: "pf-history" }, el("div", { class: "pf-label", text: "Недавно смотрели" }),
+        el("div", { class: "pf-group" }, ...(seen.length
+          ? [...seen.map((d) => pfRow(null, d.trade, { onclick: () => open(d.id) })),
+            pfRow(null, "Очистить историю", { quiet: true, onclick: clearViewed })]
+          : [el("div", { class: "pf-empty", text: "Вы ещё не открывали препараты" })]))),
+
+      el("div", null, el("div", { class: "pf-label", text: "Настройки" }),
+        el("div", { class: "pf-group" }, pfRow(ICO.font, "Крупный шрифт", { right: sw, onclick: toggleBigFont }))),
+
+      el("div", null, el("div", { class: "pf-label", text: "Цена выше предельной?" }),
+        el("div", { class: "pf-group" },
+          pfRow(ICO.phone, `Позвонить ${HOTLINE_PHONE}`, { href: `tel:${HOTLINE_PHONE}`, sub: "Телефон доверия Агентства фармацевтики" }),
+          pfRow(ICO.chat, `@${HOTLINE_TG}`, { onclick: openHotlineTg, sub: "Написать в Telegram" }))),
+
+      el("div", null, el("div", { class: "pf-label", text: "О данных" }),
+        el("div", { class: "pf-group" },
+          pfRow(ICO.data, `Реестр от ${date(updated)}`, { sub: `${drugs.length.toLocaleString("ru-RU")} препаратов узбекских производителей` }),
+          pfRow(ICO.globe, "uzpharm-control.uz", { onclick: () => openLink("https://uzpharm-control.uz/"), sub: "Официальный реестр Минздрава РУз" }),
+          pfRow(ICO.info, "Что такое предельная цена", { sub: "Аптека не вправе продавать дороже. Если цена не установлена, ограничения нет." }))),
+
+      el("p", { class: "source", text: "Справочная информация. Перед применением лекарства проконсультируйтесь с врачом." })));
+  }
+  function clearViewed() {
+    const doClear = () => {
+      viewed = [];
+      store.set("viewedIds", viewed);
+      renderProfile();
+    };
+    if (inTelegram && tg.showConfirm) tg.showConfirm("Очистить историю просмотров?", (ok) => ok && doClear());
+    else doClear();
+  }
+  function toggleBigFont() {
+    const on = !document.body.classList.contains("big-font");
+    document.body.classList.toggle("big-font", on);
+    store.set("bigFont", on);
+    haptic();
+    renderProfile();
+  }
+  function openLink(url) {
+    if (inTelegram) tg.openLink(url); else window.open(url, "_blank", "noopener");
+  }
+  function openHotlineTg() {
+    const url = `https://t.me/${HOTLINE_TG}`;
+    if (inTelegram) tg.openTelegramLink(url); else window.open(url, "_blank", "noopener");
   }
 
   // ---------- карточка ----------
-  // карточка лежит поверх списка (position: fixed), поэтому список не перерисовывается и остаётся на том же месте
   function open(id) {
     history.pushState({ card: true }, "", `#/d/${id}`);   // пометка: эту карточку открыли изнутри приложения
     route();
   }
   function goBack() {
     if (history.state && history.state.card) history.back();
-    else location.replace("#");                  // карточку открыли по прямой ссылке — назад в поиск, а не из приложения
+    else location.replace("#");                  // карточку открыли по прямой ссылке — назад, а не из приложения
   }
 
   function renderCard(d) {
-    const head = el("div", { class: "card-head" });
+    viewed = [d.id, ...viewed.filter((x) => x !== d.id)].slice(0, VIEWED_MAX);
+    store.set("viewedIds", viewed);
+
+    const head = el("div", { class: "card-head" }, favButton(d, "card-star"));
     if (d.photo) {
       head.append(el("img", { class: "photo", src: `photos/${d.photo}`, alt: `Упаковка: ${d.trade}`, loading: "lazy" }));
       head.append(el("p", { class: "photo-note", text: d.level === "exact" ? "Фото упаковки" : "Фото упаковки — в коробке может быть другое количество" }));
@@ -165,10 +388,7 @@
       el("p", { text: "В аптеке дороже предельной цены? Сообщите в Агентство фармацевтики." }),
       el("div", { class: "buttons" },
         el("a", { class: "btn", href: `tel:${HOTLINE_PHONE}`, text: `Позвонить ${HOTLINE_PHONE}` }),
-        el("button", { class: "btn secondary", type: "button", text: `@${HOTLINE_TG}`, onclick: () => {
-          const url = `https://t.me/${HOTLINE_TG}`;
-          if (inTelegram) tg.openTelegramLink(url); else window.open(url, "_blank", "noopener");
-        } })));
+        el("button", { class: "btn secondary", type: "button", text: `@${HOTLINE_TG}`, onclick: openHotlineTg })));
 
     const analogs = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id)
       .sort((a, b) => (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
@@ -180,8 +400,42 @@
       el("section", { class: "block" }, hotline),
       analogs.length ? el("section", { class: "block" },
         el("h3", { text: `Аналоги — то же вещество (${analogs.length})` }),
-        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map(row))) : null,
+        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a)))) : null,
       el("p", { class: "source", text: `Источник: реестр uzpharm-control.uz, данные от ${date(updated)}` }));
+  }
+
+  // ---------- вкладки ----------
+  function setTab(name) {
+    if (!cardView.hidden) {                        // вкладку переключили из карточки — закрываем её
+      cardView.hidden = true;
+      document.body.style.overflow = "";
+      history.replaceState(null, "", "#");
+      lastHash = "";
+    }
+    if (name === tab) {                            // повторное нажатие — наверх, как в Jurabekapp
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      syncBackButton();
+      return;
+    }
+    tabScroll[tab] = window.scrollY;
+    tab = name;
+    for (const [k, node] of Object.entries(tabs)) node.hidden = k !== name;
+    document.querySelectorAll(".nav-item").forEach((b) => {
+      const on = b.dataset.tab === name;
+      b.classList.toggle("active", on);
+      if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+    });
+    if (name === "fav") renderFav();
+    if (name === "profile") renderProfile();
+    window.scrollTo(0, name === "search" ? tabScroll.search : 0);
+    syncBackButton();
+  }
+  document.querySelectorAll(".nav-item").forEach((b) => b.addEventListener("click", () => { haptic(); setTab(b.dataset.tab); }));
+
+  function syncBackButton() {
+    if (!tg) return;
+    const show = !cardView.hidden || (tab === "search" && !!input.value);
+    if (show) tg.BackButton.show(); else tg.BackButton.hide();
   }
 
   // ---------- маршруты ----------
@@ -195,20 +449,23 @@
         cardView.scrollTop = 0;
       }
       cardView.hidden = false;
-      document.body.style.overflow = "hidden";     // список под карточкой не прокручивается
-      if (tg) tg.BackButton.show();
+      document.body.style.overflow = "hidden";     // вкладка под карточкой не прокручивается
     } else {
+      const wasOpen = !cardView.hidden;
       cardView.hidden = true;
       document.body.style.overflow = "";
-      syncClear();
       if (drugs.length && !results.childElementCount) renderList();
+      if (wasOpen && tab === "fav") renderFav();         // звёздочку могли снять в карточке
+      if (wasOpen && tab === "profile") renderProfile(); // и история просмотров пополнилась
       if (m) history.replaceState(null, "", "#");   // устаревшая ссылка на карточку
     }
+    syncSearchUi();
     lastHash = location.hash;
   }
   window.addEventListener("popstate", route);
+  window.addEventListener("hashchange", route);
 
-  // ---------- кнопка «Назад» и свайп вправо ----------
+  // ---------- кнопка «‹ Назад» и свайп вправо ----------
   $("back").addEventListener("click", goBack);
 
   let sx = 0, sy = 0, dx = 0, mode = "";           // mode: "" — ещё не ясно, "x" — свайп, "y" — прокрутка
@@ -251,13 +508,13 @@
   });
 
   // ---------- крестик в поиске ----------
-  function syncClear() {
+  function syncSearchUi() {
     clearBtn.hidden = !input.value;
-    if (tg && cardView.hidden) input.value ? tg.BackButton.show() : tg.BackButton.hide();
+    syncBackButton();
   }
   function clearSearch() {
     input.value = "";
-    syncClear();
+    syncSearchUi();
     renderList();
     window.scrollTo(0, 0);
   }
@@ -268,11 +525,10 @@
 
   let timer;
   input.addEventListener("input", () => {
-    syncClear();
+    syncSearchUi();
     clearTimeout(timer);
     timer = setTimeout(renderList, 120);
   });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
-  window.addEventListener("hashchange", route);
   load();
 })();
