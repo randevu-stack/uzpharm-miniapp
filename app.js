@@ -6,8 +6,6 @@
   "use strict";
   const tg = window.Telegram && window.Telegram.WebApp;
   const inTelegram = !!(tg && tg.initData);
-  const HOTLINE_PHONE = "1003";
-  const HOTLINE_TG = "uzpharmcontrol";
   const NO_INN = /^отсутствует утвержд[её]нное мнн$/i;
   const EXAMPLES = ["Парацетамол", "Анальгин", "Цитрамон", "Амоксициллин", "Дротаверин"];   // все есть в реестре
   const FAV_CLOUD = "favs";          // ключ в Telegram CloudStorage: {v: [id…], t: время изменения}
@@ -19,7 +17,7 @@
   const cardView = $("card-view"), cardBody = $("card");
   const tabs = { search: $("tab-search"), fav: $("tab-fav"), profile: $("tab-profile") };
 
-  let drugs = [], byId = new Map(), byInn = new Map(), updated = "", refDate = "";
+  let drugs = [], byId = new Map(), byInn = new Map();
   let tab = "search";
   const tabScroll = { search: 0, fav: 0, profile: 0 };
 
@@ -42,7 +40,6 @@
       else if (tab === "search" && input.value) clearSearch();
     });
   }
-  if (store.get("bigFont", false)) document.body.classList.add("big-font");
 
   // ---------- маленькие помощники: только textContent, никакого innerHTML с данными реестра ----------
   function el(tag, props, ...children) {
@@ -66,11 +63,6 @@
   const ICO = {
     pill: '<rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="m9.2 7.9 5.6 8.2"/>',
     star: '<path d="M12 3.5l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.3 6.6 20.3l1.1-6.1L3.2 9.9l6.1-.8L12 3.5z"/>',
-    phone: '<path d="M6.6 3h3l1.5 4.5-2 1.3a12 12 0 0 0 6.1 6.1l1.3-2L21 14.4v3A2.6 2.6 0 0 1 18.4 20 15.4 15.4 0 0 1 4 5.6 2.6 2.6 0 0 1 6.6 3z"/>',
-    chat: '<path d="M4 5h16v11H9l-5 4z"/>',
-    font: '<path d="M4 19 9.5 5h1L16 19M6.3 14h7.4M15 19l3-8 3 8M16 16.5h4"/>',
-    data: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
-    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.6 5.7 3.6 9s-1.1 6.3-3.6 9c-2.5-2.7-3.6-5.7-3.6-9S9.5 5.7 12 3z"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
   };
   const sum = (x) => Math.round(x).toLocaleString("ru-RU").replace(/ /g, " ") + " сум";
@@ -109,7 +101,7 @@
         const d = {
           id: a[f.id], trade: a[f.name], inn: a[f.inn], form: a[f.form], dosage: a[f.dosage], maker: a[f.maker],
           rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: a[f.expires], photo: a[f.photo], level: a[f.level],
-          prices: a[f.prices], agency: !!a[f.agency],
+          prices: a[f.prices],
         };
         // поля для search.js — как search_content в базе бота
         d.text = UzSearch.normalize([d.trade, d.inn].filter(Boolean).join(" "));
@@ -126,9 +118,7 @@
         if (!byInn.has(d.innKey)) byInn.set(d.innKey, []);
         byInn.get(d.innKey).push(d);
       }
-      updated = data.updated;
-      refDate = data.refDate || "";
-      $("updated").textContent = `Реестр Минздрава РУз от ${date(updated)} · ${drugs.length.toLocaleString("ru-RU")} препаратов`;
+      $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов`;
       input.disabled = false;
       if (!inTelegram) input.focus();
       route();
@@ -136,7 +126,7 @@
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
       (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepare(drugs));
     } catch (e) {
-      statusEl.textContent = "Не удалось загрузить реестр. Проверьте интернет и откройте снова.";
+      statusEl.textContent = "Не удалось загрузить справочник. Проверьте интернет и откройте снова.";
       statusEl.classList.add("warn");
     }
   }
@@ -144,10 +134,10 @@
   // ---------- строки списков ----------
   function row(d, withStar) {
     const p = minPrice(d);
-    const sub = [d.dosage, d.maker].filter(Boolean).join(" · ");
     const item = el("button", { class: "item", type: "button", onclick: () => open(d.id) },
       thumb(d),
-      el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }), el("span", { class: "item-sub", text: sub })),
+      el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }),
+        el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
       el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null, p ? "не дороже" : "цена не уст."));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
@@ -290,9 +280,6 @@
     const nFav = favs.filter((id) => byId.has(id)).length;
     const seen = viewed.map((id) => byId.get(id)).filter(Boolean);
 
-    const bigOn = document.body.classList.contains("big-font");
-    const sw = el("span", { class: "switch" + (bigOn ? " on" : ""), role: "switch", "aria-checked": String(bigOn) });
-
     $("profile-body").replaceChildren(el("div", { class: "pf" },
       el("div", { class: "pf-head" }, avatar,
         el("div", null, el("div", { class: "pf-name", text: userName }),
@@ -310,21 +297,9 @@
             pfRow(null, "Очистить историю", { quiet: true, onclick: clearViewed })]
           : [el("div", { class: "pf-empty", text: "Вы ещё не открывали препараты" })]))),
 
-      el("div", null, el("div", { class: "pf-label", text: "Настройки" }),
-        el("div", { class: "pf-group" }, pfRow(ICO.font, "Крупный шрифт", { right: sw, onclick: toggleBigFont }))),
-
-      el("div", null, el("div", { class: "pf-label", text: "Цена выше предельной?" }),
+      el("div", null, el("div", { class: "pf-label", text: "Памятка" }),
         el("div", { class: "pf-group" },
-          pfRow(ICO.phone, `Позвонить ${HOTLINE_PHONE}`, { href: `tel:${HOTLINE_PHONE}`, sub: "Телефон доверия Агентства фармацевтики" }),
-          pfRow(ICO.chat, `@${HOTLINE_TG}`, { onclick: openHotlineTg, sub: "Написать в Telegram" }))),
-
-      el("div", null, el("div", { class: "pf-label", text: "О данных" }),
-        el("div", { class: "pf-group" },
-          pfRow(ICO.data, `Реестр от ${date(updated)}`, { sub: `${drugs.length.toLocaleString("ru-RU")} препаратов с действующей регистрацией` }),
-          pfRow(ICO.globe, "uzpharm-control.uz", { onclick: () => openLink("https://uzpharm-control.uz/"), sub: "Официальный реестр Минздрава РУз" }),
-          refDate ? pfRow(ICO.globe, "uzpharmagency.uz", { onclick: () => openLink("https://uzpharmagency.uz/ru/reference-prices"),
-            sub: `Реестр референтных цен Агентства от ${date(refDate)}` }) : null,
-          pfRow(ICO.info, "Что такое предельная цена", { sub: "Аптека не вправе продавать дороже. Если цена не установлена, ограничения нет." }))),
+          pfRow(ICO.info, "Что такое предельная цена", { sub: "Максимальная розничная цена лекарства, установленная государством. Аптека не вправе продавать дороже." }))),
 
       el("p", { class: "source", text: "Справочная информация. Перед применением лекарства проконсультируйтесь с врачом." })));
   }
@@ -336,20 +311,6 @@
     };
     if (inTelegram && tg.showConfirm) tg.showConfirm("Очистить историю просмотров?", (ok) => ok && doClear());
     else doClear();
-  }
-  function toggleBigFont() {
-    const on = !document.body.classList.contains("big-font");
-    document.body.classList.toggle("big-font", on);
-    store.set("bigFont", on);
-    haptic();
-    renderProfile();
-  }
-  function openLink(url) {
-    if (inTelegram) tg.openLink(url); else window.open(url, "_blank", "noopener");
-  }
-  function openHotlineTg() {
-    const url = `https://t.me/${HOTLINE_TG}`;
-    if (inTelegram) tg.openTelegramLink(url); else window.open(url, "_blank", "noopener");
   }
 
   // ---------- карточка ----------
@@ -383,17 +344,11 @@
       el("span", { class: "badge", text: d.indefinite ? "Регистрация бессрочная" : `Регистрация до ${date(d.expires)}` })));
 
     const prices = el("ul", { class: "prices" });
-    if (!d.prices.length) prices.append(el("li", null, el("span", { class: "pack", text: "Предельная цена в реестре не указана" })));
+    if (!d.prices.length) prices.append(el("li", null, el("span", { class: "pack", text: "Предельная цена не установлена" })));
     for (const [pack, retail] of d.prices) {
       prices.append(el("li", null, el("span", { class: "pack", text: pack || "Упаковка" }),
         retail ? el("span", { class: "sum", text: sum(retail) }) : el("span", { class: "sum none", text: "цена не установлена" })));
     }
-
-    const hotline = el("div", { class: "hotline" },
-      el("p", { text: "В аптеке дороже предельной цены? Сообщите в Агентство фармацевтики." }),
-      el("div", { class: "buttons" },
-        el("a", { class: "btn", href: `tel:${HOTLINE_PHONE}`, text: `Позвонить ${HOTLINE_PHONE}` }),
-        el("button", { class: "btn secondary", type: "button", text: `@${HOTLINE_TG}`, onclick: openHotlineTg })));
 
     const analogs = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id)
       .sort((a, b) => (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
@@ -402,13 +357,9 @@
       head,
       el("section", { class: "block" }, el("h3", { text: "Предельная розничная цена" }), prices,
         minPrice(d) ? el("p", { class: "hint", text: "Аптека не вправе продавать дороже этой цены." }) : null),
-      el("section", { class: "block" }, hotline),
       analogs.length ? el("section", { class: "block" },
         el("h3", { text: `Аналоги — то же вещество (${analogs.length})` }),
-        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a)))) : null,
-      el("p", { class: "source", text: d.agency
-        ? `Цены: реестр референтных цен Агентства (uzpharmagency.uz) от ${date(refDate)}. Карточка: реестр uzpharm-control.uz от ${date(updated)}`
-        : `Источник: реестр uzpharm-control.uz, данные от ${date(updated)}` }));
+        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a)))) : null);
   }
 
   // ---------- вкладки ----------

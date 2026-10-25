@@ -99,13 +99,9 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .prices .sum { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .prices .none { color: var(--hint); font-weight: 400; white-space: normal; text-align: right; font-size: 14px; }
 .hint { color: var(--hint); font-size: 13px; margin: 8px 4px 0; }
-.hotline { background: var(--bg); border-radius: var(--radius); padding: 14px; }
-.hotline p { margin: 0 0 10px; }
-.buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { flex: 1 1 140px; display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 0 14px;
   border-radius: 10px; border: 0; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
   background: var(--accent); color: var(--accent-text); }
-.btn.secondary { background: var(--bg2); color: var(--link); }
 .source { color: var(--hint); font-size: 12px; text-align: center; margin: 20px 16px 28px; }
 
 /* ---------- нижние вкладки: парящая капсула, как в Jurabekapp ---------- */
@@ -175,11 +171,6 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .pf-chev { color: var(--hint); font-size: 22px; line-height: 1; }
 .pf-row.quiet { color: var(--link); justify-content: center; }
 .pf-empty { padding: 16px; color: var(--hint); text-align: center; }
-.switch { position: relative; width: 46px; height: 28px; flex: none; border-radius: 14px; background: color-mix(in srgb, var(--hint) 35%, transparent); transition: background .2s; }
-.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s; }
-.switch.on { background: var(--ok); }
-.switch.on::after { transform: translateX(18px); }
 
 /* ---------- всплывающее уведомление ---------- */
 .toast { position: fixed; z-index: 20; left: 50%; bottom: calc(var(--nav-space) + 8px); transform: translate(-50%, 12px);
@@ -187,11 +178,3 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* ---------- крупный шрифт (Профиль → Настройки) ---------- */
-body.big-font { font-size: 18px; }
-body.big-font .item-name, body.big-font .pf-text, body.big-font .prices .pack, body.big-font .facts { font-size: 18px; }
-body.big-font .item-sub, body.big-font .item-price, body.big-font .pf-sub, body.big-font .status, body.big-font .hint { font-size: 15px; }
-body.big-font .item-price b { font-size: 17px; }
-body.big-font h2 { font-size: 23px; }
-body.big-font .search input { font-size: 19px; }
-body.big-font .nav-item { font-size: 13px; }
