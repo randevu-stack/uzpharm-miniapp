@@ -38,6 +38,24 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .search svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hint); stroke-width: 2; stroke-linecap: round; }
 .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 17px; height: 100%; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.clear { flex: none; width: 28px; height: 28px; margin-right: -4px; border: 0; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--hint) 28%, transparent); cursor: pointer; }
+.clear[hidden] { display: none; }
+.clear svg { width: 14px; height: 14px; stroke: var(--bg); stroke-width: 3; stroke-linecap: round; fill: none; }
+
+/* верхняя панель карточки с кнопкой «Назад» */
+.bar { position: sticky; top: 0; z-index: 2; background: var(--bg2); padding: 6px 4px 0; }
+.back { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 12px 0 6px; border: 0;
+  background: none; color: var(--link); font: inherit; font-size: 17px; cursor: pointer; }
+.back svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* свайп назад: карточка едет за пальцем, под ней видно список */
+#card-view { position: fixed; inset: 0; z-index: 5; overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; background: var(--bg2); }
+#card-view > * { max-width: 640px; margin-left: auto; margin-right: auto; }
+#card-view.dragging, #card-view.settle { will-change: transform; }
+#card-view.dragging { box-shadow: -8px 0 24px rgba(0, 0, 0, .18); }
+#card-view.settle { transition: transform .22s ease-out; }
 .status { margin: 6px 20px 10px; color: var(--hint); font-size: 14px; }
 .status.warn { color: var(--warn); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 16px; padding: 0; list-style: none; }
@@ -60,7 +78,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .item-price b { display: block; color: var(--text); font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* карточка */
-.card-head { background: var(--bg); padding: 16px; margin: 12px; border-radius: var(--radius); }
+.card-head { background: var(--bg); padding: 16px; margin: 4px 12px 12px; border-radius: var(--radius); }
 .photo { display: block; width: 100%; max-width: 360px; aspect-ratio: 1; margin: 0 auto 12px; border-radius: 12px; background: #fff; object-fit: contain; }
 .photo-note { text-align: center; color: var(--hint); font-size: 13px; margin: -6px 0 12px; }
 .facts { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 15px; }

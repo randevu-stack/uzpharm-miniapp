@@ -7,11 +7,12 @@
   const inTelegram = !!(tg && tg.initData);
   const HOTLINE_PHONE = "1003";
   const HOTLINE_TG = "uzpharmcontrol";
-  const EXAMPLES = ["Парацетамол", "Анальгин", "Цитрамон", "Амоксициллин", "Дротаверин"];   // все есть в реестре
+  const NO_INN = /^отсутствует утвержд[её]нное мнн$/i;
+  const EXAMPLES =["Парацетамол", "Анальгин", "Цитрамон", "Амоксициллин", "Дротаверин"];   // все есть в реестре
 
   const $ = (id) => document.getElementById(id);
-  const input = $("q"), statusEl = $("status"), results = $("results");
-  const listView = $("list-view"), cardView = $("card-view");
+  const input = $("q"), statusEl = $("status"), results = $("results"), clearBtn = $("clear");
+  const cardView = $("card-view"), cardBody = $("card");
 
   let drugs = [], byId = new Map(), byInn = new Map(), updated = "";
 
@@ -19,7 +20,9 @@
     tg.ready();
     tg.expand();
     if (inTelegram) document.documentElement.classList.add("tg");
-    tg.BackButton.onClick(() => history.back());
+    if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();   // как в Jurabekapp: прокрутка вниз не сворачивает приложение
+    // кнопка «Назад» Telegram (и системный жест «назад» на Android): из карточки — к списку, из поиска — очистить запрос
+    tg.BackButton.onClick(() => (cardView.hidden ? clearSearch() : goBack()));
   }
 
   // ---------- маленькие помощники: только textContent, никакого innerHTML с данными реестра ----------
@@ -67,6 +70,8 @@
         d.text = UzSearch.normalize([d.trade, d.inn].filter(Boolean).join(" "));
         d.name = UzSearch.normalize(d.trade);
         d.rawLen = d.trade.length;
+        // у ~3 тыс. карточек вместо МНН заглушка — по ней аналоги не ищем, иначе «аналогом» Цитрамона станет спирт
+        if (NO_INN.test(d.inn)) d.inn = "";
         d.innKey = UzSearch.normalize(d.inn);
         return d;
       });
@@ -97,7 +102,7 @@
     if (UzSearch.normalize(q).replace(/ /g, "").length < 3) {
       statusEl.textContent = "Напишите хотя бы 3 буквы. Можно латиницей и с опечатками.";
       const chips = el("ul", { class: "chips" }, ...EXAMPLES.map((x) =>
-        el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; renderList(); } }))));
+        el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncClear(); renderList(); } }))));
       statusEl.after(chips);
       return;
     }
@@ -122,10 +127,14 @@
   }
 
   // ---------- карточка ----------
-  let listScroll = 0;
+  // карточка лежит поверх списка (position: fixed), поэтому список не перерисовывается и остаётся на том же месте
   function open(id) {
-    if (!listView.hidden) listScroll = window.scrollY;     // вернуться к тому же месту списка
-    location.hash = `#/d/${id}`;
+    history.pushState({ card: true }, "", `#/d/${id}`);   // пометка: эту карточку открыли изнутри приложения
+    route();
+  }
+  function goBack() {
+    if (history.state && history.state.card) history.back();
+    else location.replace("#");                  // карточку открыли по прямой ссылке — назад в поиск, а не из приложения
   }
 
   function renderCard(d) {
@@ -164,7 +173,7 @@
     const analogs = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id)
       .sort((a, b) => (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
 
-    cardView.replaceChildren(
+    cardBody.replaceChildren(
       head,
       el("section", { class: "block" }, el("h3", { text: "Предельная розничная цена" }), prices,
         minPrice(d) ? el("p", { class: "hint", text: "Аптека не вправе продавать дороже этой цены." }) : null),
@@ -176,26 +185,93 @@
   }
 
   // ---------- маршруты ----------
+  let lastHash = "";
   function route() {
     const m = location.hash.match(/^#\/d\/(\d+)$/);
     const d = m && byId.get(Number(m[1]));
     if (d) {
-      renderCard(d);
-      listView.hidden = true;
+      if (location.hash !== lastHash) {
+        renderCard(d);
+        cardView.scrollTop = 0;
+      }
       cardView.hidden = false;
-      window.scrollTo(0, 0);
+      document.body.style.overflow = "hidden";     // список под карточкой не прокручивается
       if (tg) tg.BackButton.show();
     } else {
       cardView.hidden = true;
-      listView.hidden = false;
-      if (tg) tg.BackButton.hide();
-      if (drugs.length) renderList();
-      window.scrollTo(0, listScroll);
+      document.body.style.overflow = "";
+      syncClear();
+      if (drugs.length && !results.childElementCount) renderList();
+      if (m) history.replaceState(null, "", "#");   // устаревшая ссылка на карточку
     }
+    lastHash = location.hash;
   }
+  window.addEventListener("popstate", route);
+
+  // ---------- кнопка «Назад» и свайп вправо ----------
+  $("back").addEventListener("click", goBack);
+
+  let sx = 0, sy = 0, dx = 0, mode = "";           // mode: "" — ещё не ясно, "x" — свайп, "y" — прокрутка
+  cardView.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    dx = 0;
+    mode = "";
+    cardView.classList.remove("settle");
+  }, { passive: true });
+  cardView.addEventListener("touchmove", (e) => {
+    if (mode === "y") return;
+    const mx = e.touches[0].clientX - sx, my = e.touches[0].clientY - sy;
+    if (!mode) {
+      if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
+      mode = mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5 ? "x" : "y";   // только явное движение вправо
+      if (mode === "y") return;
+      cardView.classList.add("dragging");
+    }
+    dx = Math.max(0, mx);
+    cardView.style.transform = `translateX(${dx}px)`;
+    e.preventDefault();
+  }, { passive: false });
+  cardView.addEventListener("touchend", () => {
+    if (mode !== "x") return;
+    cardView.classList.remove("dragging");
+    cardView.classList.add("settle");
+    const done = dx > Math.min(120, window.innerWidth * 0.3);
+    cardView.style.transform = done ? `translateX(${window.innerWidth}px)` : "";
+    if (done) {
+      setTimeout(() => {
+        cardView.hidden = true;                    // спрятать сразу: history.back() сработает не мгновенно, иначе карточка мелькнёт
+        cardView.classList.remove("settle");
+        cardView.style.transform = "";
+        goBack();
+      }, 200);
+    }
+    mode = "";
+  });
+
+  // ---------- крестик в поиске ----------
+  function syncClear() {
+    clearBtn.hidden = !input.value;
+    if (tg && cardView.hidden) input.value ? tg.BackButton.show() : tg.BackButton.hide();
+  }
+  function clearSearch() {
+    input.value = "";
+    syncClear();
+    renderList();
+    window.scrollTo(0, 0);
+  }
+  clearBtn.addEventListener("click", () => {
+    clearSearch();
+    input.focus();
+  });
 
   let timer;
-  input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(renderList, 120); });
+  input.addEventListener("input", () => {
+    syncClear();
+    clearTimeout(timer);
+    timer = setTimeout(renderList, 120);
+  });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
   window.addEventListener("hashchange", route);
   load();

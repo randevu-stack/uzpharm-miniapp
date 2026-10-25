@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Предельные цены на лекарства</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=bf48b357">
 </head>
 <body>
   <main id="app">
@@ -17,14 +17,24 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="q" type="search" placeholder="Название лекарства" autocomplete="off" autocapitalize="off"
                  spellcheck="false" enterkeyhint="search" aria-label="Название лекарства" disabled>
+          <button id="clear" class="clear" type="button" aria-label="Очистить поиск" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
+          </button>
         </label>
       </header>
       <p id="status" class="status" role="status">Загружаю реестр…</p>
       <ul id="results" class="list"></ul>
     </section>
-    <section id="card-view" hidden></section>
+    <section id="card-view" hidden>
+      <header class="bar">
+        <button id="back" class="back" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Назад
+        </button>
+      </header>
+      <div id="card"></div>
+    </section>
   </main>
-  <script src="search.js"></script>
-  <script src="app.js"></script>
+  <script src="search.js?v=edd33b4e"></script>
+  <script src="app.js?v=2fbdb81e"></script>
 </body>
 </html>
