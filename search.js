@@ -59,6 +59,44 @@
     return 0;
   }
 
+  // Индекс для поиска с опечатками: тройка букв → слова, слово → карточки. Строится один раз на массив карточек.
+  // Карточка проходит фильтр, только если для КАЖДОГО слова запроса в ней есть слово с похожестью ≥ MIN_SIM/2,
+  // поэтому смотреть остальные незачем: результат тот же, что при полном переборе, но в разы быстрее (18 тыс. карточек).
+  const indexes = new WeakMap();
+  function index(drugs) {
+    let idx = indexes.get(drugs);
+    if (idx) return idx;
+    const wordDrugs = new Map(), gramWords = new Map();
+    for (const d of drugs) {
+      for (const w of new Set(d.text.split(" "))) {
+        if (!wordDrugs.has(w)) {
+          wordDrugs.set(w, []);
+          for (const g of grams(w)) {
+            if (!gramWords.has(g)) gramWords.set(g, []);
+            gramWords.get(g).push(w);
+          }
+        }
+        wordDrugs.get(w).push(d);
+      }
+    }
+    idx = { wordDrugs, gramWords };
+    indexes.set(drugs, idx);
+    return idx;
+  }
+  function fuzzyCandidates(drugs, words) {
+    const { wordDrugs, gramWords } = index(drugs);
+    let cand = null;
+    for (const w of words) {
+      const near = new Set();
+      for (const g of grams(w)) for (const t of gramWords.get(g) || []) near.add(t);
+      const hit = new Set();
+      for (const t of near) if (sim(w, t) >= MIN_SIM / 2) for (const d of wordDrugs.get(t)) hit.add(d);
+      cand = cand ? new Set([...cand].filter((d) => hit.has(d))) : hit;
+      if (!cand.size) break;
+    }
+    return cand || [];
+  }
+
   // drugs: [{id, name, text}], где text = normalize(название + МНН), name = normalize(название) — готовит miniapp/build.py
   function search(drugs, query, limit) {
     limit = limit || LIMIT;
@@ -76,7 +114,7 @@
       }
     }
     const scored = [];
-    for (const d of drugs) {
+    for (const d of fuzzyCandidates(drugs, words)) {
       const tw = d.words || (d.words = d.text.split(" "));
       const sims = words.map((w) => Math.max(0, ...tw.map((t) => sim(w, t))));
       const total = sims.reduce((a, b) => a + b, 0);
@@ -89,7 +127,7 @@
     return { items: scored.slice(0, limit).map((p) => p[1]), exact: false, total: Math.min(scored.length, limit) };
   }
 
-  const api = { normalize, search, sim };
+  const api = { normalize, search, sim, prepare: index };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.UzSearch = api;
 })(typeof window !== "undefined" ? window : globalThis);

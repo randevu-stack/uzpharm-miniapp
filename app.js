@@ -132,6 +132,8 @@
       if (!inTelegram) input.focus();
       route();
       pullFavs();
+      // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
+      (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepare(drugs));
     } catch (e) {
       statusEl.textContent = "Не удалось загрузить реестр. Проверьте интернет и откройте снова.";
       statusEl.classList.add("warn");
@@ -317,7 +319,7 @@
 
       el("div", null, el("div", { class: "pf-label", text: "О данных" }),
         el("div", { class: "pf-group" },
-          pfRow(ICO.data, `Реестр от ${date(updated)}`, { sub: `${drugs.length.toLocaleString("ru-RU")} препаратов узбекских производителей` }),
+          pfRow(ICO.data, `Реестр от ${date(updated)}`, { sub: `${drugs.length.toLocaleString("ru-RU")} препаратов с действующей регистрацией` }),
           pfRow(ICO.globe, "uzpharm-control.uz", { onclick: () => openLink("https://uzpharm-control.uz/"), sub: "Официальный реестр Минздрава РУз" }),
           pfRow(ICO.info, "Что такое предельная цена", { sub: "Аптека не вправе продавать дороже. Если цена не установлена, ограничения нет." }))),
 
