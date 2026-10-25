@@ -49,6 +49,9 @@
   }
 
   const MIN_SIM = 0.4;
+  // препараты этого производителя показываем первыми (то же правило в uzpharm/search.py)
+  const PRIORITY_MAKER = "jurabek laboratories";
+  const prio = (d) => ((d.maker || "").toLowerCase().includes(PRIORITY_MAKER) ? 0 : 1);
   const LIMIT = 30;
 
   function cmp(a, b) {
@@ -107,8 +110,8 @@
       const vw = v.split(" ").filter((w) => w.length >= 3);
       const hits = drugs.filter((d) => vw.every((w) => d.text.includes(w)));
       if (hits.length) {
-        // сначала те, где слово — в торговом названии (а не только в МНН), потом короткие названия
-        const key = (d) => [d.name.startsWith(vw[0]) ? 0 : d.name.includes(vw[0]) ? 1 : 2, d.name.length, d.name];
+        // сначала Jurabek Laboratories, затем те, где слово — в торговом названии (а не только в МНН), потом короткие
+        const key = (d) => [prio(d), d.name.startsWith(vw[0]) ? 0 : d.name.includes(vw[0]) ? 1 : 2, d.name.length, d.name];
         const items = hits.map((d) => [key(d), d]).sort((a, b) => cmp(a[0], b[0])).slice(0, limit).map((p) => p[1]);
         return { items, exact: true, total: hits.length };
       }
@@ -121,7 +124,7 @@
       if (total / sims.length < MIN_SIM || Math.min(...sims) < MIN_SIM / 2) continue;
       const nw = d.nameWords || (d.nameWords = d.name.split(" "));
       const inName = words.reduce((s, w) => s + Math.max(0, ...nw.map((t) => sim(w, t))), 0);
-      scored.push([[-total, -inName, d.rawLen, d.id], d]);
+      scored.push([[-total, prio(d), -inName, d.rawLen, d.id], d]);   // Jurabek — только при равной похожести
     }
     scored.sort((a, b) => cmp(a[0], b[0]));
     return { items: scored.slice(0, limit).map((p) => p[1]), exact: false, total: Math.min(scored.length, limit) };
