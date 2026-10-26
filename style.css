@@ -221,10 +221,28 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .sc-ok { fill: #1f9d55; }
 .sc-ok-mark { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .sc-t1 { font-size: 10px; fill: var(--hint); }
-.sc-t2 { font-size: 15px; font-weight: 700; fill: var(--text); opacity: 0; animation: sc-price 6s step-end infinite; }
-.sc-p2 { animation-delay: -4s; }
-.sc-p3 { animation-delay: -2s; }
-@keyframes sc-price { 0% { opacity: 1; } 33.333% { opacity: 0; } }
+/* 8 цен по очереди: каждая 2 с (задержка 0, 2, 4… с задаёт scene_gen.py), круг — 16 с */
+.sc-t2 { font-size: 15px; font-weight: 700; fill: var(--text); opacity: 0; animation: sc-price 16s step-end infinite; }
+@keyframes sc-price { 0% { opacity: 1; } 12.5% { opacity: 0; } }
+
+/* печать «проверено» на крышке: появляется, когда коробка выходит из луча (x = +17 из пути −100…+100 → 58%) */
+.sc-stamp { opacity: 0; animation: sc-stamp 6s linear infinite; }
+.sc-box.b2 .sc-stamp { animation-delay: -2s; }
+.sc-box.b3 .sc-stamp { animation-delay: -4s; }
+@keyframes sc-stamp {
+  0%, 57% { opacity: 0; transform: scale(.3); }
+  61% { opacity: 1; transform: scale(1.3); }
+  65%, 100% { opacity: 1; transform: scale(1); }
+}
+
+/* искры у луча — в момент прохода коробки (середина 2-секундного цикла) */
+.sc-spark { opacity: 0; animation: sc-spark 2s ease-out infinite; }
+@keyframes sc-spark {
+  0%, 46% { opacity: 0; transform: translate(0, 0) scale(.5); }
+  50% { opacity: 1; transform: translate(0, 0) scale(1.1); }
+  68% { opacity: .9; }
+  85%, 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.5); }
+}
 
 .sc-pill { animation: sc-pill 3s ease-in-out infinite alternate; }
 @keyframes sc-pill { to { transform: translateY(-6px) rotate(8deg); } }
@@ -232,6 +250,6 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 /* без анимаций (настройка системы): одна коробка под сканером, первая цена */
 @media (prefers-reduced-motion: reduce) {
   .scene * { animation: none !important; }
-  .sc-box.b1, .sc-box.b3, .sc-p2, .sc-p3 { display: none; }
-  .sc-box.b2, .sc-p1 { opacity: 1; }
+  .sc-box.b1, .sc-box.b3, .sc-spark { display: none; }
+  .sc-box.b2, .sc-tag text:nth-of-type(2), .sc-stamp { opacity: 1; }
 }
