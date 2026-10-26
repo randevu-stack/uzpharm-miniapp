@@ -33,6 +33,10 @@
     tg.ready();
     tg.expand();
     if (inTelegram) document.documentElement.classList.add("tg");
+    // тёмная тема Telegram: светлая обводка у фото (--img-outline в style.css)
+    const syncScheme = () => document.documentElement.classList.toggle("dark", tg.colorScheme === "dark");
+    syncScheme();
+    tg.onEvent("themeChanged", syncScheme);
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();   // как в Jurabekapp: прокрутка вниз не сворачивает приложение
     // кнопка «Назад» Telegram (и системный жест «назад» на Android): из карточки — назад, в поиске — очистить запрос
     tg.BackButton.onClick(() => {
