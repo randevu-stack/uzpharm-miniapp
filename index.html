@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Предельные цены на лекарства</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css?v=f7de36c3">
+  <link rel="stylesheet" href="style.css?v=1d8c3b59">
 </head>
 <body>
   <main id="app">
@@ -28,37 +28,47 @@
       <!-- пустой экран поиска: изометрический сканер цен (собирает miniapp/scene_gen.py) -->
       <div id="scene" class="scene-wrap" aria-hidden="true">
       <!-- SCENE -->
-<svg class="scene" viewBox="0 0 340 230" role="img" aria-label="Сканер проверяет предельные цены на лекарства">
+<svg class="scene" viewBox="0 0 340 230" role="img" aria-label="Сканер проверяет цены: в норме — зелёный, выше предельной — красный, коробку снимают с ленты">
 <ellipse cx="170.0" cy="160.0" rx="150" ry="34" class="sc-shadow"/>
 <polygon points="88.6,67.0 296.4,187.0 251.4,213.0 43.6,93.0" fill="var(--sc-belt-top)"/><polygon points="43.6,103.0 251.4,223.0 251.4,213.0 43.6,93.0" fill="var(--sc-belt-l)"/><polygon points="296.4,197.0 251.4,223.0 251.4,213.0 296.4,187.0" fill="var(--sc-belt-r)"/>
 <clipPath id="sc-belt"><polygon points="88.6,67.0 296.4,187.0 251.4,213.0 43.6,93.0"/></clipPath>
 <g clip-path="url(#sc-belt)"><g class="sc-stripes"><polygon points="71.3,57.0 76.5,60.0 31.4,86.0 26.2,83.0" /><polygon points="88.6,67.0 93.8,70.0 48.8,96.0 43.6,93.0" /><polygon points="105.9,77.0 111.1,80.0 66.1,106.0 60.9,103.0" /><polygon points="123.2,87.0 128.4,90.0 83.4,116.0 78.2,113.0" /><polygon points="140.6,97.0 145.8,100.0 100.7,126.0 95.5,123.0" /><polygon points="157.9,107.0 163.1,110.0 118.0,136.0 112.8,133.0" /><polygon points="175.2,117.0 180.4,120.0 135.4,146.0 130.2,143.0" /><polygon points="192.5,127.0 197.7,130.0 152.7,156.0 147.5,153.0" /><polygon points="209.8,137.0 215.0,140.0 170.0,166.0 164.8,163.0" /><polygon points="227.2,147.0 232.4,150.0 187.3,176.0 182.1,173.0" /><polygon points="244.5,157.0 249.7,160.0 204.6,186.0 199.4,183.0" /><polygon points="261.8,167.0 267.0,170.0 222.0,196.0 216.8,193.0" /><polygon points="279.1,177.0 284.3,180.0 239.3,206.0 234.1,203.0" /></g></g>
-<polygon points="200.3,51.5 209.0,56.5 202.0,60.5 193.4,55.5" fill="var(--sc-frame-top)"/><polygon points="193.4,121.5 202.0,126.5 202.0,60.5 193.4,55.5" fill="var(--sc-frame-l)"/><polygon points="209.0,122.5 202.0,126.5 202.0,60.5 209.0,56.5" fill="var(--sc-frame-r)"/>
-<g class="sc-boxes" style="--ax:0.8660;--ay:0.5000">
-<g class="sc-box b1"><polygon points="166.5,101.0 196.0,118.0 173.5,131.0 144.0,114.0" fill="#ffffff"/><polygon points="144.0,138.0 173.5,155.0 173.5,131.0 144.0,114.0" fill="#e6eaf0"/><polygon points="196.0,142.0 173.5,155.0 173.5,131.0 196.0,118.0" fill="#cfd6e0"/><polygon points="144.0,130.0 173.5,147.0 173.5,140.0 144.0,123.0" fill="#2b7fd6"/><polygon points="196.0,134.0 173.5,147.0 173.5,140.0 196.0,127.0" fill="#7fb5ec"/><polygon points="166.5,112.0 176.9,118.0 173.5,120.0 163.1,114.0" fill="#2b7fd6" opacity=".85"/><polygon points="173.5,112.0 176.9,114.0 166.5,120.0 163.1,118.0" fill="#2b7fd6" opacity=".85"/><g class="sc-stamp" style="transform-origin:180.4px 118.0px"><ellipse cx="180.4" cy="118.0" rx="9" ry="5.2" fill="#1f9d55"/><path d="M176.4 118.0l2.6 1.8 4.6-3.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g></g>
-<g class="sc-box b2"><polygon points="166.5,101.0 196.0,118.0 173.5,131.0 144.0,114.0" fill="#ffffff"/><polygon points="144.0,138.0 173.5,155.0 173.5,131.0 144.0,114.0" fill="#e6eaf0"/><polygon points="196.0,142.0 173.5,155.0 173.5,131.0 196.0,118.0" fill="#cfd6e0"/><polygon points="144.0,130.0 173.5,147.0 173.5,140.0 144.0,123.0" fill="#e2463f"/><polygon points="196.0,134.0 173.5,147.0 173.5,140.0 196.0,127.0" fill="#f19a95"/><polygon points="166.5,112.0 176.9,118.0 173.5,120.0 163.1,114.0" fill="#e2463f" opacity=".85"/><polygon points="173.5,112.0 176.9,114.0 166.5,120.0 163.1,118.0" fill="#e2463f" opacity=".85"/><g class="sc-stamp" style="transform-origin:180.4px 118.0px"><ellipse cx="180.4" cy="118.0" rx="9" ry="5.2" fill="#1f9d55"/><path d="M176.4 118.0l2.6 1.8 4.6-3.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g></g>
-<g class="sc-box b3"><polygon points="166.5,101.0 196.0,118.0 173.5,131.0 144.0,114.0" fill="#ffffff"/><polygon points="144.0,138.0 173.5,155.0 173.5,131.0 144.0,114.0" fill="#e6eaf0"/><polygon points="196.0,142.0 173.5,155.0 173.5,131.0 196.0,118.0" fill="#cfd6e0"/><polygon points="144.0,130.0 173.5,147.0 173.5,140.0 144.0,123.0" fill="#1f9d55"/><polygon points="196.0,134.0 173.5,147.0 173.5,140.0 196.0,127.0" fill="#7fd0a2"/><polygon points="166.5,112.0 176.9,118.0 173.5,120.0 163.1,114.0" fill="#1f9d55" opacity=".85"/><polygon points="173.5,112.0 176.9,114.0 166.5,120.0 163.1,118.0" fill="#1f9d55" opacity=".85"/><g class="sc-stamp" style="transform-origin:180.4px 118.0px"><ellipse cx="180.4" cy="118.0" rx="9" ry="5.2" fill="#1f9d55"/><path d="M176.4 118.0l2.6 1.8 4.6-3.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g></g>
+<polygon points="200.3,51.5 209.0,56.5 202.0,60.5 193.4,55.5" fill="var(--sc-frame-top)" class="sc-fr-t"/><polygon points="193.4,121.5 202.0,126.5 202.0,60.5 193.4,55.5" fill="var(--sc-frame-l)" class="sc-fr-l"/><polygon points="209.0,122.5 202.0,126.5 202.0,60.5 209.0,56.5" fill="var(--sc-frame-r)" class="sc-fr-r"/>
+<g class="sc-boxes">
+<g class="sc-box b1 sc-reject"><polygon points="166.5,101.0 196.0,118.0 173.5,131.0 144.0,114.0" fill="#ffffff"/><polygon points="144.0,138.0 173.5,155.0 173.5,131.0 144.0,114.0" fill="#e6eaf0"/><polygon points="196.0,142.0 173.5,155.0 173.5,131.0 196.0,118.0" fill="#cfd6e0"/><polygon points="144.0,130.0 173.5,147.0 173.5,140.0 144.0,123.0" fill="#2b7fd6"/><polygon points="196.0,134.0 173.5,147.0 173.5,140.0 196.0,127.0" fill="#7fb5ec"/><polygon points="166.5,112.0 176.9,118.0 173.5,120.0 163.1,114.0" fill="#2b7fd6" opacity=".85"/><polygon points="173.5,112.0 176.9,114.0 166.5,120.0 163.1,118.0" fill="#2b7fd6" opacity=".85"/><g class="sc-stamp" style="transform-origin:180.4px 118.0px"><ellipse cx="180.4" cy="118.0" rx="9" ry="5.2" fill="#e2463f"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M177.0 115.8l6.8 4.4M183.8 115.8l-6.8 4.4"/></g></g></g>
+<g class="sc-box b2"><polygon points="166.5,101.0 196.0,118.0 173.5,131.0 144.0,114.0" fill="#ffffff"/><polygon points="144.0,138.0 173.5,155.0 173.5,131.0 144.0,114.0" fill="#e6eaf0"/><polygon points="196.0,142.0 173.5,155.0 173.5,131.0 196.0,118.0" fill="#cfd6e0"/><polygon points="144.0,130.0 173.5,147.0 173.5,140.0 144.0,123.0" fill="#e2463f"/><polygon points="196.0,134.0 173.5,147.0 173.5,140.0 196.0,127.0" fill="#f19a95"/><polygon points="166.5,112.0 176.9,118.0 173.5,120.0 163.1,114.0" fill="#e2463f" opacity=".85"/><polygon points="173.5,112.0 176.9,114.0 166.5,120.0 163.1,118.0" fill="#e2463f" opacity=".85"/><g class="sc-stamp" style="transform-origin:180.4px 118.0px"><ellipse cx="180.4" cy="118.0" rx="9" ry="5.2" fill="#1f9d55"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M176.4 118.0l2.6 1.8 4.6-3.6"/></g></g></g>
+<g class="sc-box b3"><polygon points="166.5,101.0 196.0,118.0 173.5,131.0 144.0,114.0" fill="#ffffff"/><polygon points="144.0,138.0 173.5,155.0 173.5,131.0 144.0,114.0" fill="#e6eaf0"/><polygon points="196.0,142.0 173.5,155.0 173.5,131.0 196.0,118.0" fill="#cfd6e0"/><polygon points="144.0,130.0 173.5,147.0 173.5,140.0 144.0,123.0" fill="#1f9d55"/><polygon points="196.0,134.0 173.5,147.0 173.5,140.0 196.0,127.0" fill="#7fd0a2"/><polygon points="166.5,112.0 176.9,118.0 173.5,120.0 163.1,114.0" fill="#1f9d55" opacity=".85"/><polygon points="173.5,112.0 176.9,114.0 166.5,120.0 163.1,118.0" fill="#1f9d55" opacity=".85"/><g class="sc-stamp" style="transform-origin:180.4px 118.0px"><ellipse cx="180.4" cy="118.0" rx="9" ry="5.2" fill="#1f9d55"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M176.4 118.0l2.6 1.8 4.6-3.6"/></g></g></g>
 </g>
+<g class="sc-pusher"><polygon points="196.0,173.0 199.4,175.0 182.1,185.0 178.7,183.0" fill="#c3cad5"/><polygon points="178.7,187.0 182.1,189.0 182.1,185.0 178.7,183.0" fill="#aeb7c4"/><polygon points="199.4,179.0 182.1,189.0 182.1,185.0 199.4,175.0" fill="#98a2b1"/><polygon points="193.4,159.5 209.0,168.5 205.5,170.5 189.9,161.5" fill="#ffd166"/><polygon points="189.9,179.5 205.5,188.5 205.5,170.5 189.9,161.5" fill="#f2b632"/><polygon points="209.0,186.5 205.5,188.5 205.5,170.5 209.0,168.5" fill="#d99a1c"/></g>
+<polygon points="173.5,170.0 190.8,180.0 178.7,187.0 161.3,177.0" fill="#9aa3b0"/><polygon points="161.3,207.0 178.7,217.0 178.7,187.0 161.3,177.0" fill="#7b8594"/><polygon points="190.8,210.0 178.7,217.0 178.7,187.0 190.8,180.0" fill="#646e7c"/>
 <polygon points="196.0,67.0 144.0,97.0 144.0,155.0 196.0,125.0" class="sc-beam"/>
+<polygon points="196.0,67.0 144.0,97.0 144.0,155.0 196.0,125.0" class="sc-beam sc-beam-ok"/>
+<polygon points="196.0,67.0 144.0,97.0 144.0,155.0 196.0,125.0" class="sc-beam sc-beam-bad"/>
 <line x1="196.0" y1="125.0" x2="144.0" y2="155.0" class="sc-line"/>
-<polygon points="199.4,49.0 209.8,55.0 140.6,95.0 130.2,89.0" fill="var(--sc-frame-top)"/><polygon points="130.2,99.0 140.6,105.0 140.6,95.0 130.2,89.0" fill="var(--sc-frame-l)"/><polygon points="209.8,65.0 140.6,105.0 140.6,95.0 209.8,55.0" fill="var(--sc-frame-r)"/>
-<polygon points="138.0,87.5 146.6,92.5 139.7,96.5 131.0,91.5" fill="var(--sc-frame-top)"/><polygon points="131.0,157.5 139.7,162.5 139.7,96.5 131.0,91.5" fill="var(--sc-frame-l)"/><polygon points="146.6,158.5 139.7,162.5 139.7,96.5 146.6,92.5" fill="var(--sc-frame-r)"/>
-<g class="sc-sparks"><circle cx="170.0" cy="106.0" r="2.6" fill="#ffc61a" class="sc-spark" style="--dx:29.7px;--dy:2.9px"/><circle cx="170.0" cy="106.0" r="3.4" fill="#ff5a4e" class="sc-spark" style="--dx:28.8px;--dy:19.5px"/><circle cx="170.0" cy="106.0" r="2.6" fill="#22c76f" class="sc-spark" style="--dx:5.2px;--dy:20.7px"/><circle cx="170.0" cy="106.0" r="3.4" fill="#ffc61a" class="sc-spark" style="--dx:-17.5px;--dy:25.2px"/><circle cx="170.0" cy="106.0" r="2.6" fill="#ff5a4e" class="sc-spark" style="--dx:-26.5px;--dy:9.9px"/><circle cx="170.0" cy="106.0" r="3.4" fill="#22c76f" class="sc-spark" style="--dx:-39.6px;--dy:-3.9px"/><circle cx="170.0" cy="106.0" r="2.6" fill="#ffc61a" class="sc-spark" style="--dx:-21.6px;--dy:-14.6px"/><circle cx="170.0" cy="106.0" r="3.4" fill="#ff5a4e" class="sc-spark" style="--dx:-6.9px;--dy:-27.6px"/><circle cx="170.0" cy="106.0" r="2.6" fill="#22c76f" class="sc-spark" style="--dx:13.2px;--dy:-18.9px"/><circle cx="170.0" cy="106.0" r="3.4" fill="#ffc61a" class="sc-spark" style="--dx:35.3px;--dy:-13.1px"/></g>
-<circle cx="175.2" cy="80.0" r="3.2" class="sc-led"/>
+<polygon points="199.4,49.0 209.8,55.0 140.6,95.0 130.2,89.0" fill="var(--sc-frame-top)" class="sc-fr-t"/><polygon points="130.2,99.0 140.6,105.0 140.6,95.0 130.2,89.0" fill="var(--sc-frame-l)" class="sc-fr-l"/><polygon points="209.8,65.0 140.6,105.0 140.6,95.0 209.8,55.0" fill="var(--sc-frame-r)" class="sc-fr-r"/>
+<polygon points="138.0,87.5 146.6,92.5 139.7,96.5 131.0,91.5" fill="var(--sc-frame-top)" class="sc-fr-t"/><polygon points="131.0,157.5 139.7,162.5 139.7,96.5 131.0,91.5" fill="var(--sc-frame-l)" class="sc-fr-l"/><polygon points="146.6,158.5 139.7,162.5 139.7,96.5 146.6,92.5" fill="var(--sc-frame-r)" class="sc-fr-r"/>
+<circle cx="175.2" cy="80.0" r="3.4" class="sc-led"/>
 <g class="sc-tag" style="transform-origin:170.0px 48.0px">
-<rect x="108.0" y="10.0" width="124" height="40" rx="12" class="sc-tag-bg"/>
-<circle cx="128.0" cy="30.0" r="11" class="sc-ok"/>
-<path d="M123.0 30.0l3.5 3.5 7-7.5" class="sc-ok-mark"/>
-<text x="145.0" y="25.0" class="sc-t1">не дороже</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:0s">12 300 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:2s">4 330 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:4s">46 500 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:6s">8 950 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:8s">23 400 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:10s">1 760 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:12s">61 220 сум</text>
-<text x="145.0" y="41.0" class="sc-t2" style="animation-delay:14s">15 080 сум</text>
+<rect x="106.0" y="10.0" width="128" height="40" rx="12" class="sc-tag-bg"/>
+<g class="sc-tag-ok">
+<circle cx="126.0" cy="30.0" r="11" fill="#1f9d55"/>
+<path d="M121.0 30.0l3.5 3.5 7-7.5" class="sc-mark"/>
+<text x="143.0" y="25.0" class="sc-t1">не дороже</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:0s">12 300 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:2s">4 330 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:4s">46 500 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:6s">8 950 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:8s">23 400 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:10s">1 760 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:12s">61 220 сум</text>
+<text x="143.0" y="41.0" class="sc-t2" style="animation-delay:14s">15 080 сум</text>
 </g>
+<g class="sc-tag-bad">
+<circle cx="126.0" cy="30.0" r="11" fill="#e2463f"/>
+<path d="M122.0 26.0l8 8M130.0 26.0l-8 8" class="sc-mark"/>
+<text x="143.0" y="25.0" class="sc-t1">дороже предельной</text>
+<text x="143.0" y="41.0" class="sc-t2-bad">отказ</text>
+</g></g>
 <g transform="translate(66.1 60.0) rotate(-35)"><g class="sc-pill"><rect x="-16" y="-7" width="32" height="14" rx="7" fill="#e2463f"/><rect x="0" y="-7" width="16" height="14" rx="7" fill="#ffffff"/><rect x="0" y="-7" width="8" height="14" fill="#ffffff"/><rect x="-12" y="-4" width="10" height="3" rx="1.5" fill="#fff" opacity=".45"/></g></g>
 </svg>
       <!-- /SCENE -->

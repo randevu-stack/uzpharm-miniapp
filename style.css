@@ -179,7 +179,9 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 
-/* ---------- пустой экран поиска: изометрический сканер цен (разметку собирает miniapp/scene_gen.py) ---------- */
+/* ---------- пустой экран поиска: изометрический сканер цен (разметку собирает miniapp/scene_gen.py) ----------
+   Цикл 6 с: в t = 1 с луч проходит зелёная (b2), в t = 3 с — «красная» (b1, цена выше предельной), в t = 5 с — зелёная (b3).
+   На шкале 6 с это 16,7 %, 50 % и 83,3 %; сканер светится ±0,6 с вокруг этих моментов. */
 :root {
   --sc-belt-top: color-mix(in srgb, var(--hint) 22%, var(--bg));
   --sc-belt-l: color-mix(in srgb, var(--hint) 38%, var(--bg));
@@ -205,27 +207,24 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   8%, 92% { opacity: 1; }
   100% { transform: translate(86.6px, 50px); opacity: 0; }
 }
+/* «красная» коробка: доезжает до толкателя (x = 62 → 80 % пути), плита сталкивает её за дальний край ленты,
+   коробка падает и исчезает */
+.sc-box.sc-reject { animation-name: sc-reject; }
+@keyframes sc-reject {
+  0% { transform: translate(-86.6px, -50px); opacity: 0; }
+  8% { opacity: 1; }
+  80% { transform: translate(53.7px, 31px); opacity: 1; }
+  87% { transform: translate(84.9px, 13px) rotate(4deg); opacity: 1; }
+  96%, 100% { transform: translate(97px, 31px) rotate(14deg); opacity: 0; }
+}
+.sc-pusher { animation: sc-push 6s ease-in-out infinite; }
+@keyframes sc-push {
+  0%, 77% { transform: translate(0, 0); }
+  85%, 89% { transform: translate(26px, -15px); }
+  98%, 100% { transform: translate(0, 0); }
+}
 
-/* луч сканера и линия на ленте */
-.sc-beam { fill: #ff4d4d; opacity: .14; animation: sc-beam 1s ease-in-out infinite alternate; }
-@keyframes sc-beam { to { opacity: .3; } }
-.sc-line { stroke: #ff4d4d; stroke-width: 2; stroke-linecap: round; animation: sc-beam-line 1s ease-in-out infinite alternate; }
-@keyframes sc-beam-line { from { opacity: .55; } to { opacity: 1; } }
-.sc-led { fill: #1f9d55; animation: sc-led 2s ease-in-out infinite; }
-@keyframes sc-led { 0%, 35%, 65%, 100% { fill: #8a94a3; } 45%, 55% { fill: #2bd47d; } }
-
-/* ценник: подпрыгивает, когда коробка проходит луч (каждые 2 с, в середине цикла) */
-.sc-tag { animation: sc-tag 2s ease-in-out infinite; }
-@keyframes sc-tag { 0%, 30%, 70%, 100% { transform: scale(1); } 50% { transform: scale(1.08) translateY(-3px); } }
-.sc-tag-bg { fill: var(--bg); stroke: color-mix(in srgb, var(--hint) 30%, transparent); filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .15)); }
-.sc-ok { fill: #1f9d55; }
-.sc-ok-mark { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.sc-t1 { font-size: 10px; fill: var(--hint); }
-/* 8 цен по очереди: каждая 2 с (задержка 0, 2, 4… с задаёт scene_gen.py), круг — 16 с */
-.sc-t2 { font-size: 15px; font-weight: 700; fill: var(--text); opacity: 0; animation: sc-price 16s step-end infinite; }
-@keyframes sc-price { 0% { opacity: 1; } 12.5% { opacity: 0; } }
-
-/* печать «проверено» на крышке: появляется, когда коробка выходит из луча (x = +17 из пути −100…+100 → 58%) */
+/* печать на крышке: появляется, когда коробка выходит из луча (x = +17 из пути −100…+100 → 58 %) */
 .sc-stamp { opacity: 0; animation: sc-stamp 6s linear infinite; }
 .sc-box.b2 .sc-stamp { animation-delay: -2s; }
 .sc-box.b3 .sc-stamp { animation-delay: -4s; }
@@ -235,21 +234,65 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   65%, 100% { opacity: 1; transform: scale(1); }
 }
 
-/* искры у луча — в момент прохода коробки (середина 2-секундного цикла) */
-.sc-spark { opacity: 0; animation: sc-spark 2s ease-out infinite; }
-@keyframes sc-spark {
-  0%, 46% { opacity: 0; transform: translate(0, 0) scale(.5); }
-  50% { opacity: 1; transform: translate(0, 0) scale(1.1); }
-  68% { opacity: .9; }
-  85%, 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.5); }
+/* рамка сканера целиком загорается: зелёным — цена в норме, красным — выше предельной */
+.sc-fr-t { animation: sc-fr-t 6s linear infinite; }
+.sc-fr-l { animation: sc-fr-l 6s linear infinite; }
+.sc-fr-r { animation: sc-fr-r 6s linear infinite; }
+@keyframes sc-fr-t {
+  0%, 7%, 26%, 40%, 60%, 74%, 93%, 100% { fill: var(--sc-frame-top); }
+  10%, 23%, 77%, 90% { fill: #7ee2a8; }
+  43%, 57% { fill: #ff9c94; }
 }
+@keyframes sc-fr-l {
+  0%, 7%, 26%, 40%, 60%, 74%, 93%, 100% { fill: var(--sc-frame-l); }
+  10%, 23%, 77%, 90% { fill: #1f9d55; }
+  43%, 57% { fill: #e2463f; }
+}
+@keyframes sc-fr-r {
+  0%, 7%, 26%, 40%, 60%, 74%, 93%, 100% { fill: var(--sc-frame-r); }
+  10%, 23%, 77%, 90% { fill: #157a40; }
+  43%, 57% { fill: #b3302a; }
+}
+/* луч: спокойный синий, при проверке — зелёный или красный слой */
+.sc-beam { fill: #4d9cf0; opacity: .12; }
+.sc-beam-ok { fill: #22c76f; opacity: 0; animation: sc-beam-ok 6s linear infinite; }
+.sc-beam-bad { fill: #ff4d4d; opacity: 0; animation: sc-beam-bad 6s linear infinite; }
+@keyframes sc-beam-ok { 0%, 7%, 26%, 74%, 93%, 100% { opacity: 0; } 10%, 23%, 77%, 90% { opacity: .38; } }
+@keyframes sc-beam-bad { 0%, 40%, 60%, 100% { opacity: 0; } 43%, 57% { opacity: .42; } }
+.sc-line { stroke-width: 2.4; stroke-linecap: round; animation: sc-line 6s linear infinite; }
+@keyframes sc-line {
+  0%, 7%, 26%, 40%, 60%, 74%, 93%, 100% { stroke: #4d9cf0; }
+  10%, 23%, 77%, 90% { stroke: #22c76f; }
+  43%, 57% { stroke: #ff4d4d; }
+}
+.sc-led { animation: sc-led 6s linear infinite; }
+@keyframes sc-led {
+  0%, 7%, 26%, 40%, 60%, 74%, 93%, 100% { fill: #8a94a3; }
+  10%, 23%, 77%, 90% { fill: #2bd47d; }
+  43%, 57% { fill: #ff4d4d; }
+}
+
+/* ценник: подпрыгивает при каждой проверке; в окне «красной» коробки (2–4 с) — красный вариант */
+.sc-tag { animation: sc-tag 2s ease-in-out infinite; }
+@keyframes sc-tag { 0%, 30%, 70%, 100% { transform: scale(1); } 50% { transform: scale(1.08) translateY(-3px); } }
+.sc-tag-bg { fill: var(--bg); stroke: color-mix(in srgb, var(--hint) 30%, transparent); filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .15)); }
+.sc-tag-ok { animation: sc-tag-ok 6s step-end infinite; }
+.sc-tag-bad { opacity: 0; animation: sc-tag-bad 6s step-end infinite; }
+@keyframes sc-tag-ok { 0% { opacity: 1; } 33.333% { opacity: 0; } 66.667% { opacity: 1; } }
+@keyframes sc-tag-bad { 0% { opacity: 0; } 33.333% { opacity: 1; } 66.667% { opacity: 0; } }
+.sc-mark { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.sc-t1 { font-size: 10px; fill: var(--hint); }
+/* 8 цен по очереди: каждая 2 с (задержка 0, 2, 4… с задаёт scene_gen.py), круг — 16 с */
+.sc-t2 { font-size: 15px; font-weight: 700; fill: var(--text); opacity: 0; animation: sc-price 16s step-end infinite; }
+@keyframes sc-price { 0% { opacity: 1; } 12.5% { opacity: 0; } }
+.sc-t2-bad { font-size: 15px; font-weight: 700; fill: #e2463f; }
 
 .sc-pill { animation: sc-pill 3s ease-in-out infinite alternate; }
 @keyframes sc-pill { to { transform: translateY(-6px) rotate(8deg); } }
 
-/* без анимаций (настройка системы): одна коробка под сканером, первая цена */
+/* без анимаций (настройка системы): одна проверенная коробка, зелёный ценник с первой ценой */
 @media (prefers-reduced-motion: reduce) {
   .scene * { animation: none !important; }
-  .sc-box.b1, .sc-box.b3, .sc-spark { display: none; }
-  .sc-box.b2, .sc-tag text:nth-of-type(2), .sc-stamp { opacity: 1; }
+  .sc-box.b1, .sc-box.b3, .sc-tag-bad { display: none; }
+  .sc-box.b2, .sc-tag-ok text:nth-of-type(2), .sc-stamp { opacity: 1; }
 }
