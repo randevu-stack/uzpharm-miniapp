@@ -123,9 +123,7 @@
         byInn.get(d.innKey).push(d);
       }
       $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов`;
-      input.disabled = false;
-      if (!inTelegram) input.focus();
-      route();
+      route();                                     // если запрос набрали, пока грузились данные, — покажет результаты
       pullFavs();
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
       (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepare(drugs));
@@ -160,6 +158,10 @@
       const chips = el("ul", { class: "chips" }, ...EXAMPLES.map((x) =>
         el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
       statusEl.after(chips);
+      return;
+    }
+    if (!drugs.length) {                           // справочник ещё грузится — поиск выполнится сам после загрузки
+      statusEl.textContent = "Загружаю справочник…";
       return;
     }
     const { items, exact, total } = UzSearch.search(drugs, q);
@@ -420,7 +422,7 @@
       const wasOpen = !cardView.hidden;
       cardView.hidden = true;
       document.body.style.overflow = "";
-      if (drugs.length && !results.childElementCount) renderList();
+      if (drugs.length && input.value && !results.childElementCount) renderList();   // пустой экран уже нарисован сразу
       if (wasOpen && tab === "fav") renderFav();         // звёздочку могли снять в карточке
       if (wasOpen && tab === "profile") renderProfile(); // и история просмотров пополнилась
       if (m) history.replaceState(null, "", "#");   // устаревшая ссылка на карточку
@@ -496,5 +498,8 @@
     timer = setTimeout(renderList, 120);
   });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
+  // пустой экран поиска (подсказка, примеры, сканер) не зависит от данных — рисуем сразу, не дожидаясь справочника (~0,8 МБ)
+  renderList();
+  if (!inTelegram) input.focus();
   load();
 })();
