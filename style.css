@@ -178,3 +178,60 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+
+/* ---------- пустой экран поиска: изометрический сканер цен (разметку собирает miniapp/scene_gen.py) ---------- */
+:root {
+  --sc-belt-top: color-mix(in srgb, var(--hint) 22%, var(--bg));
+  --sc-belt-l: color-mix(in srgb, var(--hint) 38%, var(--bg));
+  --sc-belt-r: color-mix(in srgb, var(--hint) 52%, var(--bg));
+  --sc-frame-top: color-mix(in srgb, var(--accent) 70%, #fff);
+  --sc-frame-l: var(--accent);
+  --sc-frame-r: color-mix(in srgb, var(--accent) 72%, #000);
+}
+.scene-wrap { max-width: 360px; margin: 6px auto 0; padding: 0 12px; }
+.scene-wrap[hidden] { display: none; }
+.scene { display: block; width: 100%; height: auto; overflow: visible; }
+.sc-shadow { fill: color-mix(in srgb, var(--text) 10%, transparent); filter: blur(6px); }
+.sc-stripes polygon { fill: color-mix(in srgb, var(--hint) 30%, transparent); }
+.sc-stripes { animation: sc-belt .6s linear infinite; }
+@keyframes sc-belt { to { transform: translate(17.32px, 10px); } }
+
+/* коробки едут вдоль ленты: вектор оси x в изометрии (0,866; 0,5) × 100 */
+.sc-box { animation: sc-move 6s linear infinite; opacity: 0; }
+.sc-box.b2 { animation-delay: -2s; }
+.sc-box.b3 { animation-delay: -4s; }
+@keyframes sc-move {
+  0% { transform: translate(-86.6px, -50px); opacity: 0; }
+  8%, 92% { opacity: 1; }
+  100% { transform: translate(86.6px, 50px); opacity: 0; }
+}
+
+/* луч сканера и линия на ленте */
+.sc-beam { fill: #ff4d4d; opacity: .14; animation: sc-beam 1s ease-in-out infinite alternate; }
+@keyframes sc-beam { to { opacity: .3; } }
+.sc-line { stroke: #ff4d4d; stroke-width: 2; stroke-linecap: round; animation: sc-beam-line 1s ease-in-out infinite alternate; }
+@keyframes sc-beam-line { from { opacity: .55; } to { opacity: 1; } }
+.sc-led { fill: #1f9d55; animation: sc-led 2s ease-in-out infinite; }
+@keyframes sc-led { 0%, 35%, 65%, 100% { fill: #8a94a3; } 45%, 55% { fill: #2bd47d; } }
+
+/* ценник: подпрыгивает, когда коробка проходит луч (каждые 2 с, в середине цикла) */
+.sc-tag { animation: sc-tag 2s ease-in-out infinite; }
+@keyframes sc-tag { 0%, 30%, 70%, 100% { transform: scale(1); } 50% { transform: scale(1.08) translateY(-3px); } }
+.sc-tag-bg { fill: var(--bg); stroke: color-mix(in srgb, var(--hint) 30%, transparent); filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .15)); }
+.sc-ok { fill: #1f9d55; }
+.sc-ok-mark { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.sc-t1 { font-size: 10px; fill: var(--hint); }
+.sc-t2 { font-size: 15px; font-weight: 700; fill: var(--text); opacity: 0; animation: sc-price 6s step-end infinite; }
+.sc-p2 { animation-delay: -4s; }
+.sc-p3 { animation-delay: -2s; }
+@keyframes sc-price { 0% { opacity: 1; } 33.333% { opacity: 0; } }
+
+.sc-pill { animation: sc-pill 3s ease-in-out infinite alternate; }
+@keyframes sc-pill { to { transform: translateY(-6px) rotate(8deg); } }
+
+/* без анимаций (настройка системы): одна коробка под сканером, первая цена */
+@media (prefers-reduced-motion: reduce) {
+  .scene * { animation: none !important; }
+  .sc-box.b1, .sc-box.b3, .sc-p2, .sc-p3 { display: none; }
+  .sc-box.b2, .sc-p1 { opacity: 1; }
+}

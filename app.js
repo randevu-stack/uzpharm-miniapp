@@ -149,7 +149,9 @@
     statusEl.classList.remove("warn");
     const old = tabs.search.querySelector(".chips");
     if (old) old.remove();
-    if (UzSearch.normalize(q).replace(/ /g, "").length < 3) {
+    const empty = UzSearch.normalize(q).replace(/ /g, "").length < 3;
+    $("scene").hidden = !empty;                    // сканер-анимация — только на пустом экране поиска
+    if (empty) {
       statusEl.textContent = "Напишите хотя бы 3 буквы. Можно латиницей и с опечатками.";
       const chips = el("ul", { class: "chips" }, ...EXAMPLES.map((x) =>
         el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
