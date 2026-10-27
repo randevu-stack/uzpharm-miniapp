@@ -567,5 +567,24 @@
   // service worker: справочник и сборка остаются в телефоне — следующий запуск быстрее и работает без интернета
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    // Telegram на телефоне не закрывает мини-апп, а сворачивает: при возврате проверяем, не вышла ли новая сборка.
+    // Новый service worker сам берёт управление (skipWaiting) — тогда перезагружаемся, но не посреди карточки или ввода.
+    const hadController = !!navigator.serviceWorker.controller;
+    let updateReady = false;
+    const reloadIfIdle = () => {
+      if (updateReady && cardView.hidden && document.activeElement !== input) location.reload();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController) return;                  // первая установка — страница и так свежая
+      updateReady = true;
+      reloadIfIdle();
+    });
+    const checkUpdate = () => {
+      if (document.hidden) return;
+      navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
+      reloadIfIdle();
+    };
+    document.addEventListener("visibilitychange", checkUpdate);
+    if (tg && tg.onEvent) tg.onEvent("activated", checkUpdate);   // мини-апп развернули из свёрнутого
   }
 })();
