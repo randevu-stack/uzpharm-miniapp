@@ -11,6 +11,8 @@
   const FAV_CLOUD = "favs";          // ключ в Telegram CloudStorage: {v: [id…], t: время изменения}
   const FAV_MAX = 300;               // значение в CloudStorage — до 4096 символов, id ~6 символов
   const VIEWED_MAX = 30;
+  const BOT = "Uzpharmapp";          // @Uzpharmapp: ссылка «Поделиться» — t.me/<бот>?start=d_<id>, бот присылает карточку
+  const SAVE_MIN = 10;               // «аналог дешевле» показываем, если выгода от 10 %
 
   const $ = (id) => document.getElementById(id);
   const input = $("q"), statusEl = $("status"), results = $("results"), clearBtn = $("clear");
@@ -68,10 +70,19 @@
     pill: '<rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="m9.2 7.9 5.6 8.2"/>',
     star: '<path d="M12 3.5l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.3 6.6 20.3l1.1-6.1L3.2 9.9l6.1-.8L12 3.5z"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+    share: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
+    save: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/>',
   };
   const sum = (x) => Math.round(x).toLocaleString("ru-RU").replace(/ /g, " ") + " сум";
   const date = (s) => (s && s.length >= 10 ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : "—");
   const minPrice = (d) => d.prices.reduce((m, p) => (p[1] && (m == null || p[1] < m) ? p[1] : m), null);
+  // цена за штуку — по «№28» в названии упаковки; без количества сравнивать пачки нечестно (10 шт. против 30)
+  const unitPrice = (d) => d.prices.reduce((m, [pack, retail]) => {
+    const n = Number((/№\s*(\d+)/.exec(pack) || [])[1]);
+    return retail && n && (m == null || retail / n < m) ? retail / n : m;
+  }, null);
+  const sameDose = (a, b) => UzSearch.normalize(a.form) === UzSearch.normalize(b.form)
+    && UzSearch.normalize(a.dosage) === UzSearch.normalize(b.dosage);
   const plural = (n, one, few, many) => {
     const m10 = n % 10, m100 = n % 100;
     return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many;
@@ -97,16 +108,20 @@
   // ---------- данные ----------
   async function load() {
     try {
-      const r = await fetch("data.json", { cache: "no-cache" });
+      // адрес с ?v=<хэш> вписывает build.py в <link id="data">; браузер начал качать его ещё при разборе страницы
+      const r = await fetch($("data").getAttribute("href"));
       if (!r.ok) throw new Error(r.status);
       const data = await r.json();
       const f = Object.fromEntries(data.fields.map((name, i) => [name, i]));
+      const dicts = data.dicts || {};               // формат data.json — в miniapp/build.py
+      const v = (a, name) => (dicts[name] ? dicts[name][a[f[name]]] : a[f[name]]);
       drugs = data.drugs.map((a) => {
         const d = {
-          id: a[f.id], trade: a[f.name], inn: a[f.inn], form: a[f.form], dosage: a[f.dosage], maker: a[f.maker],
-          rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: a[f.expires], photo: a[f.photo], level: a[f.level],
-          prices: a[f.prices],
+          id: a[f.id], trade: a[f.name], inn: v(a, "inn"), form: v(a, "form"), dosage: v(a, "dosage"), maker: v(a, "maker"),
+          rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: v(a, "expires"), photo: a[f.photo], level: v(a, "level"),
+          uz: !!a[f.uz],
         };
+        d.prices = a[f.prices].map(([pack, retail]) => [pack === 0 ? d.trade : pack, retail]);   // 0 — как название
         // поля для search.js — как search_content в базе бота
         d.text = UzSearch.normalize([d.trade, d.inn].filter(Boolean).join(" "));
         d.name = UzSearch.normalize(d.trade);
@@ -122,7 +137,8 @@
         if (!byInn.has(d.innKey)) byInn.set(d.innKey, []);
         byInn.get(d.innKey).push(d);
       }
-      $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов`;
+      $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов`
+        + (navigator.onLine === false ? " · без интернета, сохранённый справочник" : "");
       route();                                     // если запрос набрали, пока грузились данные, — покажет результаты
       pullFavs();
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
@@ -134,13 +150,14 @@
   }
 
   // ---------- строки списков ----------
-  function row(d, withStar) {
+  function row(d, withStar, save) {               // save — на сколько % аналог дешевле открытого препарата
     const p = minPrice(d);
     const item = el("button", { class: "item", type: "button", onclick: () => open(d.id) },
       thumb(d),
       el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }),
         el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
-      el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null, p ? "не дороже" : "цена не уст."));
+      el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null,
+        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? "не дороже" : "цена не уст."));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
 
@@ -348,6 +365,7 @@
     fact("Производитель", d.maker);
     head.append(facts);
     head.append(el("div", { class: "badges" },
+      d.uz ? el("span", { class: "badge uz", text: "Узбекское производство" }) : null,
       el("span", { class: d.rx ? "badge rx" : "badge otc", text: d.rx ? "По рецепту" : "Без рецепта" }),
       el("span", { class: "badge", text: d.indefinite ? "Регистрация бессрочная" : `Регистрация до ${date(d.expires)}` })));
 
@@ -363,13 +381,52 @@
       .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b)
         || (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
 
+    // выгода: только та же форма и дозировка, цена за штуку; среди выгодных первым — Jurabek, как в списке аналогов
+    const mine = unitPrice(d);
+    const saves = new Map();
+    if (mine) {
+      for (const a of analogs) {
+        const u = sameDose(a, d) && unitPrice(a);
+        const pct = u ? Math.round((1 - u / mine) * 100) : 0;
+        if (pct >= SAVE_MIN) saves.set(a.id, pct);
+      }
+    }
+    const best = analogs.filter((a) => saves.has(a.id))
+      .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b) || saves.get(b.id) - saves.get(a.id))[0];
+
     cardBody.replaceChildren(
       head,
       el("section", { class: "block" }, el("h3", { text: "Предельная розничная цена" }), prices,
-        minPrice(d) ? el("p", { class: "hint", text: "Аптека не вправе продавать дороже этой цены." }) : null),
+        minPrice(d) ? el("p", { class: "hint", text: "Аптека не вправе продавать дороже этой цены." }) : null,
+        best ? el("button", { class: "save", type: "button", onclick: () => open(best.id) },
+          el("span", { class: "save-ico" }, svg(ICO.save)),
+          el("span", { class: "save-text" }, el("b", { text: `Аналог дешевле на ${saves.get(best.id)} %` }),
+            el("small", { text: `${best.trade} — то же вещество и дозировка, в пересчёте на 1 шт.` })),
+          el("span", { class: "pf-chev", text: "›" })) : null,
+        el("button", { class: "btn share", type: "button", onclick: () => share(d) }, svg(ICO.share), "Поделиться ценой")),
       analogs.length ? el("section", { class: "block" },
         el("h3", { text: `Аналоги — то же вещество (${analogs.length})` }),
-        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a)))) : null);
+        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a, false, saves.get(a.id))))) : null);
+  }
+
+  function share(d) {
+    haptic();
+    const link = `https://t.me/${BOT}?start=d_${d.id}`;
+    const p = minPrice(d);
+    const text = p ? `${d.trade} — не дороже ${sum(p)}` : d.trade;
+    try {
+      if (inTelegram && tg.openTelegramLink) {        // окно Telegram «Переслать»: выбрать чат и отправить
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+        return;
+      }
+    } catch (e) { /* старый клиент — ниже */ }
+    if (navigator.share) {
+      navigator.share({ title: d.trade, text, url: link }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(`${text}\n${link}`).then(() => toast("Ссылка скопирована"), () => toast(link));
+    } else {
+      toast(link);
+    }
   }
 
   // ---------- вкладки ----------
@@ -499,7 +556,16 @@
   });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
   // пустой экран поиска (подсказка, примеры, сканер) не зависит от данных — рисуем сразу, не дожидаясь справочника (~0,8 МБ)
+  // открыли по ссылке на препарат: кнопка бота (?d=<id>) или ссылка t.me/<бот>/…?startapp=d_<id>
+  const startId = new URLSearchParams(location.search).get("d")
+    || ((inTelegram && tg.initDataUnsafe && /^d_(\d+)$/.exec(tg.initDataUnsafe.start_param || "")) || [])[1];
+  if (/^\d+$/.test(startId || "")) history.replaceState(null, "", `#/d/${startId}`);   // откроет route() после загрузки
+
   renderList();
-  if (!inTelegram) input.focus();
+  if (!inTelegram && !startId) input.focus();
   load();
+  // service worker: справочник и сборка остаются в телефоне — следующий запуск быстрее и работает без интернета
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
 })();

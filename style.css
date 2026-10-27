@@ -104,6 +104,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .badge { font-size: 13px; padding: 3px 9px; border-radius: 999px; background: var(--bg2); color: var(--hint); }
 .badge.rx { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .badge.otc { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.badge.uz { color: var(--link); background: color-mix(in srgb, var(--link) 12%, transparent); }
 .block { margin: 16px 12px; }
 .prices { list-style: none; margin: 0; padding: 0; background: var(--bg); border-radius: var(--radius); }
 .prices li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; align-items: baseline; }
@@ -117,6 +118,22 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   background: var(--accent); color: var(--accent-text); transition: transform .12s var(--press); }
 .btn:active { transform: scale(.96); }
 .source { color: var(--hint); font-size: 12px; text-align: center; margin: 20px 16px 28px; }
+
+/* ---------- «аналог дешевле» и «поделиться» в карточке ---------- */
+.save { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding: 12px 14px; border: 0;
+  border-radius: var(--radius); background: color-mix(in srgb, var(--ok) 11%, var(--bg)); color: inherit; font: inherit;
+  text-align: left; cursor: pointer; transition: transform .12s var(--press); }
+.save:active { transform: scale(.98); }
+.save-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ok); color: #fff; }
+.save-ico svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.save-text { flex: 1; min-width: 0; }
+.save-text b { display: block; color: var(--ok); }
+.save-text small { display: block; color: var(--hint); font-size: 13px; overflow-wrap: anywhere; }
+.save .pf-chev { color: var(--hint); font-size: 22px; }
+.save-tag { display: inline-block; margin-top: 2px; padding: 1px 7px; border-radius: 999px; font-weight: 600;
+  color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); font-variant-numeric: tabular-nums; }
+.btn.share { width: 100%; margin-top: 12px; gap: 8px; background: var(--bg); color: var(--link); }
+.btn.share svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- нижние вкладки: парящая капсула, как в Jurabekapp ---------- */
 .bottom-nav { position: fixed; z-index: 10; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
