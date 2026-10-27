@@ -180,7 +180,8 @@
       el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }),
         el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
       el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null,
-        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? "не дороже" : "цена не уст."));
+        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? "не дороже" : "цена не уст.",
+        el("span", { class: d.rx ? "rx-tag rx" : "rx-tag otc", text: d.rx ? "По рецепту" : "Без рецепта" })));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
 

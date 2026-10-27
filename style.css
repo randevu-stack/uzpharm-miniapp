@@ -362,3 +362,9 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .save.donor { background: color-mix(in srgb, var(--link) 9%, var(--bg)); }
 .save.donor .save-ico { background: var(--link); }
 .save.donor .save-text b { color: var(--link); }
+
+/* рецептурность в строке списка — под ценой, цветами как у меток в карточке */
+.rx-tag { display: block; width: fit-content; margin: 4px 0 0 auto; padding: 1px 7px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; white-space: nowrap; }
+.rx-tag.rx { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.rx-tag.otc { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
