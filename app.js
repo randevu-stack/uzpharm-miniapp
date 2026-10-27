@@ -1,6 +1,6 @@
 /* Мини-апп «Предельные цены»: поиск по реестру, карточка с ценами и фото, аналоги по МНН,
    избранное и профиль (нижние вкладки — как в Jurabekapp).
-   Данные — data.json (собирает miniapp/build.py), поиск — search.js. Карточка открывается поверх вкладки
+   Данные — catalog.json (собирает miniapp/build.py), поиск — search.js. Карточка открывается поверх вкладки
    через history.pushState (#/d/<id>), чтобы работали «Назад» в Telegram, кнопка «‹ Назад» и свайп вправо. */
 (function () {
   "use strict";
@@ -113,7 +113,7 @@
       if (!r.ok) throw new Error(r.status);
       const data = await r.json();
       const f = Object.fromEntries(data.fields.map((name, i) => [name, i]));
-      const dicts = data.dicts || {};               // формат data.json — в miniapp/build.py
+      const dicts = data.dicts || {};               // формат catalog.json — в miniapp/build.py
       const v = (a, name) => (dicts[name] ? dicts[name][a[f[name]]] : a[f[name]]);
       drugs = data.drugs.map((a) => {
         const d = {
