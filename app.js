@@ -786,11 +786,14 @@
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
     // Telegram на телефоне не закрывает мини-апп, а сворачивает: при возврате проверяем, не вышла ли новая сборка.
-    // Новый service worker сам берёт управление (skipWaiting) — тогда перезагружаемся, но не посреди карточки или ввода.
+    // Новый service worker сам берёт управление (skipWaiting) — тогда перезагружаемся, но только пока человек
+    // ещё ничего не нажал: иначе перезагрузка выбросит его из каталога или карточки обратно на поиск.
+    // Нажал — новая сборка подождёт, пока приложение свернут и снова откроют.
     const hadController = !!navigator.serviceWorker.controller;
-    let updateReady = false;
+    let updateReady = false, touched = false;
+    for (const ev of ["pointerdown", "keydown"]) window.addEventListener(ev, () => { touched = true; }, { capture: true, passive: true });
     const reloadIfIdle = () => {
-      if (updateReady && cardView.hidden && document.activeElement !== input) location.reload();
+      if (updateReady && !touched) location.reload();
     };
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (!hadController) return;                  // первая установка — страница и так свежая
@@ -798,11 +801,17 @@
       reloadIfIdle();
     });
     const checkUpdate = () => {
-      if (document.hidden) return;
+      if (document.hidden) {                       // свернули: следующий возврат — как новый запуск
+        touched = false;
+        return;
+      }
       navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
       reloadIfIdle();
     };
     document.addEventListener("visibilitychange", checkUpdate);
-    if (tg && tg.onEvent) tg.onEvent("activated", checkUpdate);   // мини-апп развернули из свёрнутого
+    if (tg && tg.onEvent) {
+      tg.onEvent("activated", checkUpdate);        // мини-апп развернули из свёрнутого
+      tg.onEvent("deactivated", () => { touched = false; });
+    }
   }
 })();
