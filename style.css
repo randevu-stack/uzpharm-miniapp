@@ -329,3 +329,36 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   .sc-box.b1, .sc-box.b3, .sc-tag-bad { display: none; }
   .sc-box.b2, .sc-tag-ok text:nth-of-type(2), .sc-stamp { opacity: 1; }
 }
+
+/* ---------- каталог и подбор по симптому ---------- */
+.cat-top .cat-back { margin: -4px 0 2px -10px; }
+.cat-item { padding-right: 8px; }
+.cat-item.muted .item-name { color: var(--hint); font-weight: 500; }
+.cat-count { flex: none; color: var(--hint); font-size: 14px; font-variant-numeric: tabular-nums; }
+.cat-item .pf-chev { flex: none; color: var(--hint); font-size: 22px; line-height: 1; }
+.cat-sec h3, .picks-title { margin: 0 16px 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: var(--hint); }
+.picks { margin-top: 4px; }
+.picks .list { margin-bottom: 10px; }
+.thumb.sym { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--bg)); }
+.thumb.sym svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+
+/* ---------- карточка: ссылка на группу и инструкция ---------- */
+.link { padding: 0; border: 0; background: none; color: var(--link); font: inherit; text-align: left; cursor: pointer; }
+.instr { background: var(--bg); border-radius: var(--radius); overflow: hidden; }
+.instr > .hint { padding: 12px 14px; margin: 0; }
+.instr-sec + .instr-sec { border-top: 1px solid var(--line); }
+.instr-sec summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px;
+  font-weight: 600; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+.instr-sec summary::-webkit-details-marker { display: none; }
+.instr-sec summary::after { content: "›"; color: var(--hint); font-size: 22px; line-height: 1; transition: transform .2s var(--press); }
+.instr-sec[open] summary::after { transform: rotate(90deg); }
+.rich { padding: 0 14px 14px; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.rich p, .rich ul, .rich ol { margin: 0 0 8px; }
+.rich ul, .rich ol { padding-left: 20px; }
+.rich > :last-child { margin-bottom: 0; }
+.table-wrap { overflow-x: auto; margin: 0 0 8px; -webkit-overflow-scrolling: touch; }
+.rich table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.rich td, .rich th { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+.save.donor { background: color-mix(in srgb, var(--link) 9%, var(--bg)); }
+.save.donor .save-ico { background: var(--link); }
+.save.donor .save-text b { color: var(--link); }

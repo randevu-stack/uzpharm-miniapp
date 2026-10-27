@@ -1,13 +1,24 @@
-/* Мини-апп «Предельные цены»: поиск по реестру, карточка с ценами и фото, аналоги по МНН,
-   избранное и профиль (нижние вкладки — как в Jurabekapp).
-   Данные — catalog.json (собирает miniapp/build.py), поиск — search.js. Карточка открывается поверх вкладки
-   через history.pushState (#/d/<id>), чтобы работали «Назад» в Telegram, кнопка «‹ Назад» и свайп вправо. */
+/* Мини-апп «Справочник лекарств»: поиск по реестру и по симптомам, каталог по группам АТХ, карточка с ценами, фото,
+   составом и инструкцией, аналоги по МНН, избранное и профиль (нижние вкладки — как в Jurabekapp).
+   Данные — catalog.json и info/*.json (собирает miniapp/build.py), поиск — search.js, группы и симптомы — atc.js.
+   Карточка открывается поверх вкладки через history.pushState (#/d/<id>), чтобы работали «Назад» в Telegram,
+   кнопка «‹ Назад» и свайп вправо. */
 (function () {
   "use strict";
   const tg = window.Telegram && window.Telegram.WebApp;
   const inTelegram = !!(tg && tg.initData);
   const NO_INN = /^отсутствует утвержд[её]нное мнн$/i;
-  const EXAMPLES = ["Парацетамол", "Анальгин", "Цитрамон", "Амоксициллин", "Дротаверин"];   // все есть в реестре
+  const EXAMPLES = ["Парацетамол", "Кашель", "Давление", "Аллергия", "Цитрамон"];   // лекарство и симптомы — всё находится
+  // разделы инструкции в порядке показа (ключи — как в реестре, см. INSTRUCTION_SECTIONS в uzpharm/db.py)
+  const SECTIONS = [
+    ["indication_for_use", "Показания"], ["route_of_administration", "Способ применения и дозы"],
+    ["contraindication", "Противопоказания"], ["side_effect", "Побочные действия"], ["special_direction", "Особые указания"],
+    ["pregnancy", "Беременность и кормление грудью"], ["drug_interaction", "Взаимодействие с другими лекарствами"],
+    ["overdose", "Передозировка"], ["influence_driving_ability", "Влияние на вождение"],
+    ["pharmacodynamics", "Фармакодинамика"], ["pharmacokinetics", "Фармакокинетика"], ["description", "Описание"],
+    ["incompatibility", "Несовместимость"], ["special_precautions_disposal", "Утилизация"],
+    ["preclinical_safety_data", "Доклинические данные"],
+  ];
   const FAV_CLOUD = "favs";          // ключ в Telegram CloudStorage: {v: [id…], t: время изменения}
   const FAV_MAX = 300;               // значение в CloudStorage — до 4096 символов, id ~6 символов
   const VIEWED_MAX = 30;
@@ -17,11 +28,12 @@
   const $ = (id) => document.getElementById(id);
   const input = $("q"), statusEl = $("status"), results = $("results"), clearBtn = $("clear");
   const cardView = $("card-view"), cardBody = $("card");
-  const tabs = { search: $("tab-search"), fav: $("tab-fav"), profile: $("tab-profile") };
+  const tabs = { search: $("tab-search"), catalog: $("tab-catalog"), fav: $("tab-fav"), profile: $("tab-profile") };
 
-  let drugs = [], byId = new Map(), byInn = new Map();
+  let drugs = [], byId = new Map(), byInn = new Map(), byInfo = new Map(), diseases = [];
   let tab = "search";
-  const tabScroll = { search: 0, fav: 0, profile: 0 };
+  const tabScroll = { search: 0, catalog: 0, fav: 0, profile: 0 };
+  let catPath = [];                  // каталог: стопка экранов [{type, …}], пустая — список групп
 
   // ---------- хранилище в телефоне: всегда через try — в приватном режиме оно может не работать ----------
   const store = {
@@ -43,6 +55,7 @@
     // кнопка «Назад» Telegram (и системный жест «назад» на Android): из карточки — назад, в поиске — очистить запрос
     tg.BackButton.onClick(() => {
       if (!cardView.hidden) goBack();
+      else if (tab === "catalog" && catPath.length) catBack();
       else if (tab === "search" && input.value) clearSearch();
     });
   }
@@ -72,6 +85,8 @@
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
     share: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
     save: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/>',
+    doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    sym: '<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/>',
   };
   const sum = (x) => Math.round(x).toLocaleString("ru-RU").replace(/ /g, " ") + " сум";
   const date = (s) => (s && s.length >= 10 ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : "—");
@@ -119,7 +134,8 @@
         const d = {
           id: a[f.id], trade: a[f.name], inn: v(a, "inn"), form: v(a, "form"), dosage: v(a, "dosage"), maker: v(a, "maker"),
           rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: v(a, "expires"), photo: a[f.photo], level: v(a, "level"),
-          uz: !!a[f.uz],
+          uz: !!a[f.uz], atc: v(a, "atc") || "", comp: v(a, "comp") || "", route: v(a, "route") || "",
+          shelf: v(a, "shelf") || "", info: v(a, "info") || "",
         };
         d.prices = a[f.prices].map(([pack, retail]) => [pack === 0 ? d.trade : pack, retail]);   // 0 — как название
         // поля для search.js — как search_content в базе бота
@@ -133,13 +149,20 @@
       });
       byId = new Map(drugs.map((d) => [d.id, d]));
       for (const d of drugs) {
+        if (d.info) (byInfo.get(d.info) || byInfo.set(d.info, []).get(d.info)).push(d);
         if (!d.innKey) continue;
         if (!byInn.has(d.innKey)) byInn.set(d.innKey, []);
         byInn.get(d.innKey).push(d);
       }
+      // заболевания (МКБ-10) из инструкций: [название, код, [номера инструкций]] → карточки с этими инструкциями
+      diseases = (data.diseases || []).map(([name, code, infos]) => {
+        const list = [...new Set(infos.flatMap((i) => byInfo.get((dicts.info || [])[i]) || []))];
+        return { name, code, key: UzSearch.normalize(name), drugs: list };
+      }).filter((x) => x.drugs.length);
       $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов`
         + (navigator.onLine === false ? " · без интернета, сохранённый справочник" : "");
       route();                                     // если запрос набрали, пока грузились данные, — покажет результаты
+      if (tab === "catalog") renderCatalog();
       pullFavs();
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
       (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepare(drugs));
@@ -166,12 +189,11 @@
     const q = input.value;
     results.replaceChildren();
     statusEl.classList.remove("warn");
-    const old = tabs.search.querySelector(".chips");
-    if (old) old.remove();
+    tabs.search.querySelectorAll(".chips, .picks").forEach((n) => n.remove());
     const empty = UzSearch.normalize(q).replace(/ /g, "").length < 3;
     $("scene").hidden = !empty;                    // сканер-анимация — только на пустом экране поиска
     if (empty) {
-      statusEl.textContent = "Напишите хотя бы 3 буквы. Можно латиницей и с опечатками.";
+      statusEl.textContent = "Напишите название лекарства, действующее вещество или симптом. Можно латиницей и с опечатками.";
       const chips = el("ul", { class: "chips" }, ...EXAMPLES.map((x) =>
         el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
       statusEl.after(chips);
@@ -182,8 +204,11 @@
       return;
     }
     const { items, exact, total } = UzSearch.search(drugs, q);
+    const picks = symptomPicks(q);                 // «кашель», «астма» — подбор по группе или заболеванию
+    if (picks) statusEl.before(picks);
     if (!items.length) {
-      statusEl.textContent = "Ничего не нашлось. Проверьте название или попробуйте действующее вещество.";
+      statusEl.textContent = picks ? "Препаратов с таким названием нет — выберите подбор выше."
+        : "Ничего не нашлось. Проверьте название или попробуйте действующее вещество.";
       return;
     }
     statusEl.textContent = !exact ? "Точно не нашёл. Возможно, вы искали:"
@@ -359,10 +384,16 @@
     }
     head.append(el("h2", { text: d.trade }));
     const facts = el("dl", { class: "facts" });
-    const fact = (k, v) => v && facts.append(el("dt", { text: k }), el("dd", { text: v }));
+    const fact = (k, v) => v && facts.append(el("dt", { text: k }), el("dd", null, v));
     fact("МНН", d.inn);
+    fact("Состав", d.comp);
     fact("Форма", [d.form, d.dosage].filter(Boolean).join(", "));
     fact("Производитель", d.maker);
+    const sub = UzAtc.sub(d.atc);
+    if (sub) fact("Группа", el("button", { class: "link", type: "button", text: sub,
+      onclick: () => openCatalog({ type: "s", code: d.atc.slice(0, 3) }) }));
+    fact("Применение", d.route);
+    fact("Срок годности", shelfLife(d.shelf));
     head.append(facts);
     head.append(el("div", { class: "badges" },
       d.uz ? el("span", { class: "badge uz", text: "Узбекское производство" }) : null,
@@ -404,9 +435,74 @@
             el("small", { text: `${best.trade} — то же вещество и дозировка, в пересчёте на 1 шт.` })),
           el("span", { class: "pf-chev", text: "›" })) : null,
         el("button", { class: "btn share", type: "button", onclick: () => share(d) }, svg(ICO.share), "Поделиться ценой")),
+      instructionBlock(d),
       analogs.length ? el("section", { class: "block" },
         el("h3", { text: `Аналоги — то же вещество (${analogs.length})` }),
         el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a, false, saves.get(a.id))))) : null);
+  }
+
+  // ---------- инструкция ----------
+  const infoCache = new Map();                    // имя файла → Promise с разделами
+  function loadInfo(name) {
+    if (!infoCache.has(name)) {
+      infoCache.set(name, fetch(`info/${name}.json`).then((r) => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).catch((e) => { infoCache.delete(name); throw e; }));
+    }
+    return infoCache.get(name);
+  }
+  // HTML инструкции собираем заново только из разрешённых тегов: DOMParser не выполняет скрипты,
+  // а в страницу попадают лишь наши createElement и текст (build.py чистит его ещё при сборке)
+  const RICH_TAGS = new Set(["P", "BR", "UL", "OL", "LI", "STRONG", "EM", "U", "SUP", "SUB", "TABLE", "THEAD", "TBODY", "TR", "TD", "TH"]);
+  function rich(html) {
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
+    const frag = document.createDocumentFragment();
+    const walk = (src, dst) => {
+      for (const n of src.childNodes) {
+        if (n.nodeType === Node.TEXT_NODE) dst.append(n.nodeValue);
+        else if (n.nodeType === Node.ELEMENT_NODE && RICH_TAGS.has(n.tagName)) {
+          const e = document.createElement(n.tagName.toLowerCase());
+          for (const a of ["colspan", "rowspan"]) if (/^\d{1,2}$/.test(n.getAttribute(a) || "")) e.setAttribute(a, n.getAttribute(a));
+          walk(n, e);
+          dst.append(n.tagName === "TABLE" ? el("div", { class: "table-wrap" }, e) : e);   // широкая таблица листается вбок
+        } else if (n.nodeType === Node.ELEMENT_NODE) walk(n, dst);
+      }
+    };
+    walk(doc.body, frag);
+    return frag;
+  }
+  function instructionBlock(d) {
+    const sec = el("section", { class: "block" }, el("h3", { text: "Инструкция" }));
+    if (d.info) {
+      const box = el("div", { class: "instr" }, el("p", { class: "hint", text: "Загружаю инструкцию…" }));
+      sec.append(box);
+      loadInfo(d.info).then((info) => {
+        box.replaceChildren(...SECTIONS.filter(([k]) => info[k]).map(([k, title], i) =>
+          el("details", i === 0 ? { class: "instr-sec", open: "" } : { class: "instr-sec" },
+            el("summary", { text: title }), el("div", { class: "rich" }, rich(info[k])))));
+      }, () => box.replaceChildren(el("p", { class: "hint", text: "Не удалось загрузить инструкцию. Проверьте интернет и откройте карточку снова." })));
+      return sec;
+    }
+    // своей инструкции в реестре нет — честно говорим и даём инструкцию препарата с тем же веществом и формой
+    const form = UzSearch.normalize(d.form);
+    const donor = (byInn.get(d.innKey) || []).filter((a) => a.info && UzSearch.normalize(a.form) === form)
+      .sort((a, b) => (sameDose(a, d) ? 0 : 2) + UzSearch.prio(a) - (sameDose(b, d) ? 0 : 2) - UzSearch.prio(b))[0];
+    sec.append(el("p", { class: "hint", text: "Официальной инструкции к этому препарату в реестре пока нет." }));
+    if (donor) {
+      sec.append(el("button", { class: "save donor", type: "button", onclick: () => open(donor.id) },
+        el("span", { class: "save-ico" }, svg(ICO.doc)),
+        el("span", { class: "save-text" }, el("b", { text: "Инструкция препарата с тем же веществом" }),
+          el("small", { text: `${donor.trade} — ${donor.maker}` })),
+        el("span", { class: "pf-chev", text: "›" })));
+    }
+    return sec;
+  }
+  function shelfLife(s) {                         // в реестре «4 лет», «24 месяцев» — приводим к нормальному русскому
+    const m = /^(\d+)\s*(лет|год|года|мес)/i.exec(s || "");
+    if (!m) return s;
+    const n = Number(m[1]);
+    return /^мес/i.test(m[2]) ? `${n} ${plural(n, "месяц", "месяца", "месяцев")}` : `${n} ${plural(n, "год", "года", "лет")}`;
   }
 
   function share(d) {
@@ -429,6 +525,121 @@
     }
   }
 
+  // ---------- каталог: группа АТХ → подгруппа → вещество → препараты; плюс подбор по симптому и заболеванию ----------
+  const byPrio = (a, b) => UzSearch.prio(a) - UzSearch.prio(b) || a.trade.localeCompare(b.trade, "ru");
+  const inAtc = (prefixes) => (d) => prefixes.some((p) => d.atc.startsWith(p));
+  const count = (n) => `${n} ${plural(n, "препарат", "препарата", "препаратов")}`;
+
+  function substances(list) {                    // препараты → [{title, key, list}] по МНН, без МНН — отдельно
+    const map = new Map(), none = [];
+    for (const d of list) {
+      if (!d.innKey) { none.push(d); continue; }
+      if (!map.has(d.innKey)) map.set(d.innKey, { title: d.inn.charAt(0).toUpperCase() + d.inn.slice(1), list: [] });
+      map.get(d.innKey).list.push(d);
+    }
+    const out = [...map.values()].sort((a, b) => a.title.localeCompare(b.title, "ru"));
+    if (none.length) out.push({ title: "Комбинированные и без МНН", list: none, muted: true });
+    return out;
+  }
+  function catRow(title, sub, n, onclick, muted) {
+    return el("li", null, el("button", { class: "item cat-item" + (muted ? " muted" : ""), type: "button", onclick },
+      el("span", { class: "item-body" }, el("span", { class: "item-name", text: title }), sub ? el("span", { class: "item-sub", text: sub }) : null),
+      el("span", { class: "cat-count", text: String(n) }), el("span", { class: "pf-chev", text: "›" })));
+  }
+  function substanceRows(list, title) {
+    return substances(list).map((s) => catRow(s.title, null, s.list.length,
+      () => catPush({ type: "list", title: s.title, sub: title, list: s.list }), s.muted));
+  }
+  function renderCatalog() {
+    const node = catPath[catPath.length - 1] || { type: "root" };
+    let title = "Каталог", sub = "", body = [];
+    if (!drugs.length) {
+      body = [el("p", { class: "status", text: "Загружаю справочник…" })];
+    } else if (node.type === "root") {
+      sub = "Лекарства по группам — как в аптечном справочнике";
+      const groups = Object.entries(UzAtc.GROUPS).map(([code, [name, hint]]) =>
+        [code, name, hint, drugs.filter((d) => d.atc.charAt(0) === code).length]).filter((g) => g[3]);
+      body = [el("ul", { class: "list" }, ...groups.map(([code, name, hint, n]) =>
+        catRow(name, hint, n, () => catPush({ type: "g", code }))))];
+    } else if (node.type === "g") {
+      [title, sub] = UzAtc.GROUPS[node.code];
+      const subs = new Map();
+      for (const d of drugs) if (d.atc.charAt(0) === node.code && d.atc.length >= 3) subs.set(d.atc.slice(0, 3), (subs.get(d.atc.slice(0, 3)) || 0) + 1);
+      body = [el("ul", { class: "list" }, ...[...subs].sort().map(([code, n]) =>
+        catRow(UzAtc.sub(code) || code, null, n, () => catPush({ type: "s", code }))))];
+    } else if (node.type === "s") {
+      title = UzAtc.sub(node.code) || node.code;
+      sub = (UzAtc.group(node.code) || [""])[0];
+      body = [el("ul", { class: "list" }, ...substanceRows(drugs.filter(inAtc([node.code])), title))];
+    } else if (node.type === "sym") {             // симптом может вести в несколько подгрупп — показываем их секциями
+      title = node.sym.name;
+      sub = "Подбор по группам лекарств. Перед применением посоветуйтесь с врачом или фармацевтом.";
+      body = node.sym.atc.map((p) => [p, drugs.filter(inAtc([p]))]).filter(([, l]) => l.length).map(([p, l]) =>
+        el("section", { class: "cat-sec" }, el("h3", { text: UzAtc.sub(p) || p }), el("ul", { class: "list" }, ...substanceRows(l, title))));
+    } else if (node.type === "dis") {
+      title = node.dis.name;
+      sub = `Показание в официальной инструкции · МКБ-10 ${node.dis.code}`;
+      body = [el("ul", { class: "list" }, ...node.dis.drugs.slice().sort(byPrio).map((d) => row(d)))];
+    } else if (node.type === "list") {
+      title = node.title;
+      sub = `${node.sub} · ${count(node.list.length)}`;
+      body = [el("ul", { class: "list" }, ...node.list.slice().sort(byPrio).map((d) => row(d)))];
+    }
+    $("catalog-body").replaceChildren(
+      el("header", { class: "top cat-top" },
+        catPath.length ? el("button", { class: "back cat-back", type: "button", onclick: catBack },
+          svg('<path d="M15 5l-7 7 7 7"/>'), "Назад") : null,
+        el("h1", { text: title }), sub ? el("p", { class: "muted", text: sub }) : null),
+      ...body);
+  }
+  const catScroll = [];
+  function catPush(node) {
+    catScroll.push(window.scrollY);
+    catPath.push(node);
+    renderCatalog();
+    window.scrollTo(0, 0);
+    syncBackButton();
+  }
+  function catBack() {
+    catPath.pop();
+    renderCatalog();
+    window.scrollTo(0, catScroll.pop() || 0);
+    syncBackButton();
+  }
+  function openCatalog(node) {                   // из поиска или карточки: сразу нужный экран, «Назад» — к группам
+    catPath = [node];
+    catScroll.length = 0;
+    catScroll.push(0);
+    if (tab !== "catalog" || !cardView.hidden) setTab("catalog");   // заодно закроет карточку
+    renderCatalog();
+    window.scrollTo(0, 0);
+    syncBackButton();
+  }
+
+  function symptomPicks(q) {
+    const nq = UzSearch.normalize(q);
+    const picks = UzAtc.symptoms(nq).map((s) => ({ s, n: drugs.filter(inAtc(s.atc)).length })).filter((x) => x.n)
+      .map(({ s, n }) => ({ title: s.name, sub: count(n), go: () => openCatalog({ type: "sym", sym: s }) }));
+    // заболевания из инструкций: все слова запроса (от 4 букв) — начала слов названия («астм» → «Астма»)
+    const words = nq.split(" ").filter((w) => w.length >= 4);
+    if (words.length) {
+      for (const x of diseases) {
+        if (picks.length >= 4) break;
+        if (picks.some((p) => p.title.toLowerCase() === x.name.toLowerCase())) continue;   // «Кашель» уже есть как симптом
+        if (words.every((w) => x.key.split(" ").some((t) => t.startsWith(w)))) {
+          picks.push({ title: x.name, sub: `по инструкциям · ${count(x.drugs.length)}`, go: () => openCatalog({ type: "dis", dis: x }) });
+        }
+      }
+    }
+    if (!picks.length) return null;
+    return el("div", { class: "picks" }, el("p", { class: "picks-title", text: "Подбор по симптому" }),
+      el("ul", { class: "list" }, ...picks.slice(0, 4).map((p) =>
+        el("li", null, el("button", { class: "item cat-item", type: "button", onclick: p.go },
+          el("span", { class: "thumb none sym" }, svg(ICO.sym)),
+          el("span", { class: "item-body" }, el("span", { class: "item-name", text: p.title }), el("span", { class: "item-sub", text: p.sub })),
+          el("span", { class: "pf-chev", text: "›" }))))));
+  }
+
   // ---------- вкладки ----------
   function setTab(name) {
     if (!cardView.hidden) {                        // вкладку переключили из карточки — закрываем её
@@ -438,6 +649,11 @@
       lastHash = "";
     }
     if (name === tab) {                            // повторное нажатие — наверх, как в Jurabekapp
+      if (name === "catalog" && catPath.length && window.scrollY < 40) {   // в каталоге уже наверху — к списку групп
+        catPath = [];
+        catScroll.length = 0;
+        renderCatalog();
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
       syncBackButton();
       return;
@@ -452,14 +668,15 @@
     });
     if (name === "fav") renderFav();
     if (name === "profile") renderProfile();
-    window.scrollTo(0, name === "search" ? tabScroll.search : 0);
+    if (name === "catalog") renderCatalog();
+    window.scrollTo(0, name === "search" || name === "catalog" ? tabScroll[name] : 0);
     syncBackButton();
   }
   document.querySelectorAll(".nav-item").forEach((b) => b.addEventListener("click", () => { haptic(); setTab(b.dataset.tab); }));
 
   function syncBackButton() {
     if (!tg) return;
-    const show = !cardView.hidden || (tab === "search" && !!input.value);
+    const show = !cardView.hidden || (tab === "search" && !!input.value) || (tab === "catalog" && catPath.length > 0);
     if (show) tg.BackButton.show(); else tg.BackButton.hide();
   }
 

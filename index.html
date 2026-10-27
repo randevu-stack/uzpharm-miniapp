@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Предельные цены на лекарства</title>
+  <title>Справочник лекарств Узбекистана</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css?v=96d71b8b">
+  <link rel="stylesheet" href="style.css?v=9005f1b2">
   <!-- справочник качается сразу, параллельно со скриптами; build.py добавляет ?v=<хэш>, адрес берёт app.js -->
-  <link id="data" rel="preload" href="catalog.json?v=b01655e9" as="fetch" crossorigin>
+  <link id="data" rel="preload" href="catalog.json?v=614c534d" as="fetch" crossorigin>
 </head>
 <body>
   <main id="app">
     <!-- вкладка «Поиск» -->
     <section id="tab-search" class="tab">
       <header class="top">
-        <h1>Предельные цены</h1>
+        <h1>Справочник лекарств</h1>
         <p class="muted" id="updated">&nbsp;</p>
         <label class="search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="q" type="search" placeholder="Название лекарства" autocomplete="off" autocapitalize="off"
-                 spellcheck="false" enterkeyhint="search" aria-label="Название лекарства">
+          <input id="q" type="search" placeholder="Лекарство, вещество или симптом" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" enterkeyhint="search" aria-label="Лекарство, вещество или симптом">
           <button id="clear" class="clear" type="button" aria-label="Очистить поиск" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
           </button>
@@ -80,6 +80,11 @@
       </div>
     </section>
 
+    <!-- вкладка «Каталог»: группы АТХ → подгруппы → вещества → препараты (рисует app.js) -->
+    <section id="tab-catalog" class="tab" hidden>
+      <div id="catalog-body"></div>
+    </section>
+
     <!-- вкладка «Избранное» -->
     <section id="tab-fav" class="tab" hidden>
       <header class="top"><h1>Избранное</h1></header>
@@ -108,6 +113,10 @@
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg></span>
       Поиск
     </button>
+    <button class="nav-item" type="button" data-tab="catalog">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 3h5a2 2 0 0 1 2 2v5H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm9 0h5a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-7V5a2 2 0 0 1 2-2zM3 14a2 2 0 0 1 2-2h7v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm9-2h7a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2z"/></svg></span>
+      Каталог
+    </button>
     <button class="nav-item" type="button" data-tab="fav">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.3 6.6 20.3l1.1-6.1L3.2 9.9l6.1-.8L12 3.5z"/></svg></span>
       Избранное
@@ -121,6 +130,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="search.js?v=85fd76b1"></script>
-  <script src="app.js?v=68173d03"></script>
+  <script src="atc.js?v=f0851cfc"></script>
+  <script src="app.js?v=53e6eca6"></script>
 </body>
 </html>
