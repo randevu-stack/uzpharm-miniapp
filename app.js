@@ -48,7 +48,16 @@
     tg.expand();
     if (inTelegram) document.documentElement.classList.add("tg");
     // тёмная тема Telegram: светлая обводка у фото (--img-outline в style.css)
-    const syncScheme = () => document.documentElement.classList.toggle("dark", tg.colorScheme === "dark");
+    const syncScheme = () => {
+      document.documentElement.classList.toggle("dark", tg.colorScheme === "dark");
+      // шапка и низ Telegram — цвета фона приложения, а не темы Telegram (палитра своя, см. style.css)
+      const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg2").trim();
+      try {
+        if (tg.setHeaderColor) tg.setHeaderColor(bg);
+        if (tg.setBackgroundColor) tg.setBackgroundColor(bg);
+        if (tg.setBottomBarColor) tg.setBottomBarColor(bg);
+      } catch (e) { /* старый клиент Telegram */ }
+    };
     syncScheme();
     tg.onEvent("themeChanged", syncScheme);
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();   // как в Jurabekapp: прокрутка вниз не сворачивает приложение
@@ -87,8 +96,11 @@
     save: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/>',
     doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
     sym: '<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    maker: '<path d="M4 22V4s1-1 4-1 5 2 8 2 4-1 4-1v11s-1 1-4 1-5-2-8-2-4 1-4 1"/>',
   };
-  const sum = (x) => Math.round(x).toLocaleString("ru-RU").replace(/ /g, " ") + " сум";
+  const num = (x) => Math.round(x).toLocaleString("ru-RU").replace(/ /g, " ");
+  const sum = (x) => num(x) + " сум";
   const date = (s) => (s && s.length >= 10 ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : "—");
   const minPrice = (d) => d.prices.reduce((m, p) => (p[1] && (m == null || p[1] < m) ? p[1] : m), null);
   // цена за штуку — по «№28» в названии упаковки; без количества сравнивать пачки нечестно (10 шт. против 30)
@@ -159,8 +171,8 @@
         const list = [...new Set(infos.flatMap((i) => byInfo.get((dicts.info || [])[i]) || []))];
         return { name, code, key: UzSearch.normalize(name), drugs: list };
       }).filter((x) => x.drugs.length);
-      $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов`
-        + (navigator.onLine === false ? " · без интернета, сохранённый справочник" : "");
+      $("updated").textContent = `${drugs.length.toLocaleString("ru-RU")} препаратов · `
+        + (navigator.onLine === false ? "без интернета, сохранённый справочник" : "цены на сегодня");
       route();                                     // если запрос набрали, пока грузились данные, — покажет результаты
       if (tab === "catalog") renderCatalog();
       pullFavs();
@@ -179,8 +191,8 @@
       thumb(d),
       el("span", { class: "item-body" }, el("span", { class: "item-name", text: d.trade }),
         el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
-      el("span", { class: "item-price" }, p ? el("b", { text: sum(p) }) : null,
-        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? "не дороже" : "цена не уст.",
+      el("span", { class: "item-price" }, p ? el("b", { text: num(p) }) : null,
+        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? "сум" : "цена не уст.",
         el("span", { class: d.rx ? "rx-tag rx" : "rx-tag otc", text: d.rx ? "По рецепту" : "Без рецепта" })));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
@@ -190,14 +202,13 @@
     const q = input.value;
     results.replaceChildren();
     statusEl.classList.remove("warn");
-    tabs.search.querySelectorAll(".chips, .picks").forEach((n) => n.remove());
+    tabs.search.querySelectorAll(".picks").forEach((n) => n.remove());
     const empty = UzSearch.normalize(q).replace(/ /g, "").length < 3;
-    $("scene").hidden = !empty;                    // сканер-анимация — только на пустом экране поиска
+    // главная (заголовок, примеры, группы, памятка, сканер) — пока запрос пустой; с запросом наверху только поиск
+    tabs.search.classList.toggle("has-q", !!q.trim());
+    $("home").hidden = !!q.trim();
     if (empty) {
-      statusEl.textContent = "Напишите название лекарства, действующее вещество или симптом. Можно латиницей и с опечатками.";
-      const chips = el("ul", { class: "chips" }, ...EXAMPLES.map((x) =>
-        el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
-      statusEl.after(chips);
+      statusEl.textContent = q.trim() ? "Напишите хотя бы 3 буквы. Можно латиницей и с опечатками." : "";
       return;
     }
     if (!drugs.length) {                           // справочник ещё грузится — поиск выполнится сам после загрузки
@@ -378,35 +389,45 @@
     viewed = [d.id, ...viewed.filter((x) => x !== d.id)].slice(0, VIEWED_MAX);
     store.set("viewedIds", viewed);
 
-    const head = el("div", { class: "card-head" }, favButton(d, "card-star"));
-    if (d.photo) {
-      head.append(el("img", { class: "photo", src: `photos/${d.photo}`, alt: `Упаковка: ${d.trade}`, loading: "lazy" }));
-      head.append(el("p", { class: "photo-note", text: d.level === "exact" ? "Фото упаковки" : "Фото упаковки — в коробке может быть другое количество" }));
+    // верх: крупное фото на мятном фоне, круглые кнопки «Поделиться» и «В избранное» в панели над ним
+    $("bar-actions").replaceChildren(
+      el("button", { class: "cb", type: "button", "aria-label": "Поделиться ценой", onclick: () => share(d) }, svg(ICO.share)),
+      favButton(d, "cb"));
+    const pic = el("div", { class: "pic" }, d.photo
+      ? el("img", { src: `photos/${d.photo}`, alt: `Упаковка: ${d.trade}` })
+      : el("span", { class: "pic-none" }, svg(ICO.pill)));
+    if (d.photo && d.level !== "exact") pic.append(el("p", { class: "photo-note", text: "В коробке может быть другое количество" }));
+    const head = el("div", { class: "ctitle" }, el("h2", { text: d.trade }),
+      el("div", { class: "tags" },
+        el("span", { class: "maker" }, svg(ICO.maker), d.maker),
+        el("span", { class: d.rx ? "badge rx" : "badge otc", text: d.rx ? "По рецепту" : "Без рецепта" }),
+        d.uz ? el("span", { class: "badge uz", text: "Узбекское производство" }) : null));
+
+    // цена: одна упаковка — крупно; несколько — крупно минимальная и список упаковок
+    const p = minPrice(d);
+    const price = el("section", { class: "price" + (p ? "" : " none") },
+      el("small", { text: d.prices.length > 1 && p ? "Предельная цена — от" : "Предельная цена" }),
+      p ? el("b", null, num(p), el("i", { text: " сум" })) : el("b", { class: "price-none", text: "не установлена" }),
+      p ? el("span", { class: "price-ok" }, svg(ICO.check), "Дороже продавать нельзя") : null);
+    if (d.prices.length > 1) {
+      price.append(el("ul", { class: "packs" }, ...d.prices.map(([pack, retail]) => el("li", null,
+        el("span", { text: pack || "Упаковка" }), el("b", { text: retail ? sum(retail) : "не уст." })))));
     }
-    head.append(el("h2", { text: d.trade }));
+
+    // три главных факта плитками, остальное — в блоке «О препарате»
+    const sub = UzAtc.sub(d.atc);
+    const tiles = el("div", { class: "tiles" },
+      el("div", null, el("small", { text: "Вещество" }), el("b", { text: d.inn || "—" })),
+      sub ? el("button", { type: "button", onclick: () => openCatalog({ type: "s", code: d.atc.slice(0, 3) }) },
+        el("small", { text: "Группа" }), el("b", { text: sub })) : el("div", null, el("small", { text: "Группа" }), el("b", { text: "—" })),
+      el("div", null, el("small", { text: "Годен" }), el("b", { text: shelfLife(d.shelf) || "—" })));
     const facts = el("dl", { class: "facts" });
     const fact = (k, v) => v && facts.append(el("dt", { text: k }), el("dd", null, v));
-    fact("МНН", d.inn);
     fact("Состав", d.comp);
     fact("Форма", [d.form, d.dosage].filter(Boolean).join(", "));
     fact("Производитель", d.maker);
-    const sub = UzAtc.sub(d.atc);
-    if (sub) fact("Группа", el("button", { class: "link", type: "button", text: sub,
-      onclick: () => openCatalog({ type: "s", code: d.atc.slice(0, 3) }) }));
     fact("Применение", d.route);
-    fact("Срок годности", shelfLife(d.shelf));
-    head.append(facts);
-    head.append(el("div", { class: "badges" },
-      d.uz ? el("span", { class: "badge uz", text: "Узбекское производство" }) : null,
-      el("span", { class: d.rx ? "badge rx" : "badge otc", text: d.rx ? "По рецепту" : "Без рецепта" }),
-      el("span", { class: "badge", text: d.indefinite ? "Регистрация бессрочная" : `Регистрация до ${date(d.expires)}` })));
-
-    const prices = el("ul", { class: "prices" });
-    if (!d.prices.length) prices.append(el("li", null, el("span", { class: "pack", text: "Предельная цена не установлена" })));
-    for (const [pack, retail] of d.prices) {
-      prices.append(el("li", null, el("span", { class: "pack", text: pack || "Упаковка" }),
-        retail ? el("span", { class: "sum", text: sum(retail) }) : el("span", { class: "sum none", text: "цена не установлена" })));
-    }
+    fact("Регистрация", d.indefinite ? "бессрочная" : `до ${date(d.expires)}`);
 
     // аналоги: сначала Jurabek Laboratories, затем дешевле, затем по названию
     const analogs = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id)
@@ -426,20 +447,40 @@
     const best = analogs.filter((a) => saves.has(a.id))
       .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b) || saves.get(b.id) - saves.get(a.id))[0];
 
+    // аналоги: лента карточек вбок; «Списком» — все строками, с выгодой в %
+    let analogBlock = null;
+    if (analogs.length) {
+      const strip = el("div", { class: "ans" }, ...analogs.slice(0, 20).map((a) => {
+        const ap = minPrice(a);
+        const t = thumb(a);
+        t.classList.add("an-pic");
+        return el("button", { class: "an", type: "button", onclick: () => open(a.id) }, t,
+          el("b", { text: a.trade }), el("small", { text: a.maker }),
+          el("span", { class: "an-p" }, ap ? sum(ap) : "цена не уст.",
+            saves.has(a.id) ? el("em", { text: `−${saves.get(a.id)} %` }) : null));
+      }));
+      const all = el("button", { class: "sec-link", type: "button", text: analogs.length > 1 ? "Списком" : "" });
+      analogBlock = el("section", { class: "block analogs" },
+        el("div", { class: "sec-h" }, el("h2", null, "Аналоги", el("em", { text: String(analogs.length) })), analogs.length > 1 ? all : null),
+        el("p", { class: "hint an-hint", text: "То же действующее вещество" }), strip);
+      all.addEventListener("click", () => {
+        strip.replaceWith(el("ul", { class: "list" }, ...analogs.slice(0, 50).map((a) => row(a, false, saves.get(a.id)))));
+        all.remove();
+      });
+    }
+
     cardBody.replaceChildren(
-      head,
-      el("section", { class: "block" }, el("h3", { text: "Предельная розничная цена" }), prices,
-        minPrice(d) ? el("p", { class: "hint", text: "Аптека не вправе продавать дороже этой цены." }) : null,
+      pic, head,
+      el("section", { class: "block price-wrap" }, price,
         best ? el("button", { class: "save", type: "button", onclick: () => open(best.id) },
           el("span", { class: "save-ico" }, svg(ICO.save)),
           el("span", { class: "save-text" }, el("b", { text: `Аналог дешевле на ${saves.get(best.id)} %` }),
             el("small", { text: `${best.trade} — то же вещество и дозировка, в пересчёте на 1 шт.` })),
-          el("span", { class: "pf-chev", text: "›" })) : null,
-        el("button", { class: "btn share", type: "button", onclick: () => share(d) }, svg(ICO.share), "Поделиться ценой")),
-      instructionBlock(d),
-      analogs.length ? el("section", { class: "block" },
-        el("h3", { text: `Аналоги — то же вещество (${analogs.length})` }),
-        el("ul", { class: "list", style: "margin:0" }, ...analogs.slice(0, 50).map((a) => row(a, false, saves.get(a.id))))) : null);
+          el("span", { class: "pf-chev", text: "›" })) : null),
+      tiles,
+      analogBlock,
+      el("section", { class: "block" }, el("div", { class: "sec-h" }, el("h2", { text: "О препарате" })), el("div", { class: "about" }, facts)),
+      instructionBlock(d));
   }
 
   // ---------- инструкция ----------
@@ -474,7 +515,7 @@
     return frag;
   }
   function instructionBlock(d) {
-    const sec = el("section", { class: "block" }, el("h3", { text: "Инструкция" }));
+    const sec = el("section", { class: "block" }, el("div", { class: "sec-h" }, el("h2", { text: "Инструкция" })));
     if (d.info) {
       const box = el("div", { class: "instr" }, el("p", { class: "hint", text: "Загружаю инструкцию…" }));
       sec.append(box);
@@ -778,6 +819,15 @@
   const startId = new URLSearchParams(location.search).get("d")
     || ((inTelegram && tg.initDataUnsafe && /^d_(\d+)$/.exec(tg.initDataUnsafe.start_param || "")) || [])[1];
   if (/^\d+$/.test(startId || "")) history.replaceState(null, "", `#/d/${startId}`);   // откроет route() после загрузки
+
+  // главная: примеры запросов, плитки групп (→ каталог), «Все» — весь каталог
+  $("chips").append(...EXAMPLES.map((x) =>
+    el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
+  tabs.search.querySelectorAll(".cat").forEach((b) => b.addEventListener("click", () => {
+    haptic();
+    openCatalog(b.dataset.g ? { type: "g", code: b.dataset.g } : { type: "s", code: b.dataset.s });
+  }));
+  tabs.search.querySelector("[data-all]").addEventListener("click", () => setTab("catalog"));
 
   renderList();
   if (!inTelegram && !startId) input.focus();
