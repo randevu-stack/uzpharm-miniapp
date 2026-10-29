@@ -207,10 +207,8 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--text); font: inherit; font-size: 11.5px;
   font-weight: 600; line-height: 1.2; text-align: center; transition: transform .12s var(--press); }
 .cat:active { transform: scale(.96); }
-.cat-i { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; color: var(--c);
-  background: color-mix(in srgb, var(--c) 13%, transparent); }
-:root.dark .cat-i { background: color-mix(in srgb, var(--c) 20%, transparent); }
-.cat-i svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cat-i { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: var(--link); background: var(--chip); }
+.cat-i svg { width: 30px; height: 30px; fill: currentColor; }
 .memo { display: flex; gap: 12px; align-items: center; margin: 18px 16px 0; padding: 14px; border-radius: 20px; background: var(--memo); color: var(--memo-text); }
 .memo b { font-size: 15px; }
 .memo p { font-size: 13px; opacity: .8; margin: 2px 0 0; line-height: 1.35; }
