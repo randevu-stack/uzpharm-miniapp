@@ -204,7 +204,7 @@
     statusEl.classList.remove("warn");
     tabs.search.querySelectorAll(".picks").forEach((n) => n.remove());
     const empty = UzSearch.normalize(q).replace(/ /g, "").length < 3;
-    // главная (заголовок, примеры, группы, памятка, сканер) — пока запрос пустой; с запросом наверху только поиск
+    // главная (заголовок, примеры, группы, памятка) — пока запрос пустой; с запросом наверху только поиск
     tabs.search.classList.toggle("has-q", !!q.trim());
     $("home").hidden = !!q.trim();
     if (empty) {
@@ -814,7 +814,7 @@
     timer = setTimeout(renderList, 120);
   });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
-  // пустой экран поиска (подсказка, примеры, сканер) не зависит от данных — рисуем сразу, не дожидаясь справочника (~0,8 МБ)
+  // пустой экран поиска (примеры, группы, памятка) не зависит от данных — рисуем сразу, не дожидаясь справочника (~0,8 МБ)
   // открыли по ссылке на препарат: кнопка бота (?d=<id>) или ссылка t.me/<бот>/…?startapp=d_<id>
   const startId = new URLSearchParams(location.search).get("d")
     || ((inTelegram && tg.initDataUnsafe && /^d_(\d+)$/.exec(tg.initDataUnsafe.start_param || "")) || [])[1];
