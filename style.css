@@ -348,3 +348,53 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   font-size: 11px; font-weight: 600; white-space: nowrap; }
 .rx-tag.rx { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .rx-tag.otc { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+
+/* ---------- короткие названия: марка крупно, форма и упаковка — строкой ниже ---------- */
+.item-form { display: block; color: var(--hint); font-size: 12.5px; line-height: 1.3; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cform { margin: 4px 0 0; color: var(--hint); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.an .an-form { color: var(--hint); }
+
+/* ---------- фильтры поиска: форма выпуска, «дешевле», «Сделано в UZ», «Без рецепта» ---------- */
+.filters { margin: 0 0 4px; }
+.frow { display: flex; gap: 8px; overflow-x: auto; padding: 2px 16px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.frow::-webkit-scrollbar { display: none; }
+.fchip { flex: none; min-height: 36px; padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg);
+  color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: transform .12s var(--press), background-color .15s ease-out, color .15s ease-out; }
+.fchip:active { transform: scale(.96); }
+.fchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.list > li.more-li { background: none; border: 0; box-shadow: none; }
+.more { width: 100%; min-height: 48px; border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius);
+  background: none; color: var(--link); font: inherit; font-weight: 700; cursor: pointer; transition: transform .12s var(--press); }
+.more:active { transform: scale(.98); }
+
+/* ---------- «Мне продают дороже?» ---------- */
+.check { margin-top: 10px; padding: 14px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); }
+.check-t { margin: 0 0 8px; font-weight: 800; font-size: 15px; }
+.check-pack { width: 100%; min-height: 40px; margin: 0 0 8px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--bg2); color: var(--text); font: inherit; font-size: 13.5px; }
+.check-box { display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 14px; border-radius: 14px;
+  background: var(--bg2); border: 1.5px solid var(--line); }
+.check-box:focus-within { border-color: var(--accent); }
+.check-box span { color: var(--hint); font-weight: 600; }
+.check-in { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 18px;
+  font-weight: 700; font-variant-numeric: tabular-nums; }
+.check-in::placeholder { font-weight: 500; font-size: 15px; color: var(--hint); }
+.check-res:empty { display: none; }
+.check-res { margin-top: 10px; padding: 10px 12px; border-radius: 12px; }
+.check-res b { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; line-height: 1.3; }
+.check-res b svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.check-res small { display: block; margin: 4px 0 0 28px; font-size: 13px; opacity: .85; }
+.check-res.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 11%, transparent); }
+.check-res.bad { color: #d92d20; background: color-mix(in srgb, #d92d20 10%, transparent); }
+:root.dark .check-res.bad { color: #ff8a80; }
+
+/* ---------- профиль: язык ---------- */
+.pf-group.lang { padding: 12px; }
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--bg2); }
+.seg button { flex: 1; min-height: 40px; border: 0; border-radius: 11px; background: none; color: var(--hint); font: inherit;
+  font-weight: 700; cursor: pointer; transition: background-color .15s ease-out, color .15s ease-out, transform .12s var(--press); }
+.seg button:active { transform: scale(.97); }
+.seg button.on { background: var(--bg); color: var(--link); box-shadow: 0 1px 4px rgba(0, 0, 0, .1); }
+.lang-sub { margin: 8px 4px 0; }

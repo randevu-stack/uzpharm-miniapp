@@ -107,10 +107,131 @@
     ["Антисептики", ["антисепт", "дезинф"], ["D08"]],
   ].map(([name, keys, atc]) => ({ name, keys, atc }));
 
+  // ---------- узбекский (латиница): группы, подгруппы, симптомы и узбекские слова для поиска по симптому ----------
+  const GROUPS_UZ = {
+    A: ["Hazm qilish va modda almashinuvi", "Oshqozon, ichak, jigar, diabet, vitaminlar"],
+    B: ["Qon", "Kamqonlik, qon ivishi, infuziya eritmalari"],
+    C: ["Yurak va qon tomirlar", "Bosim, yurak, xolesterin"],
+    D: ["Teri", "Malham, krem, antiseptiklar, yaralarni davolash"],
+    G: ["Siydik-tanosil tizimi", "Ginekologiya, urologiya, jinsiy gormonlar"],
+    H: ["Gormonlar", "Jinsiy gormonlar va insulindan tashqari"],
+    J: ["Infeksiyalarga qarshi", "Antibiotiklar, virus va zamburug‘ga qarshi, vaksinalar"],
+    L: ["Onkologiya va immunitet", "O‘smaga qarshi, immunomodulyatorlar"],
+    M: ["Mushak, bo‘g‘im, suyaklar", "Yallig‘lanishga qarshi, miorelaksantlar, podagra"],
+    N: ["Asab tizimi", "Og‘riq qoldiruvchi, tinchlantiruvchi, uyqu, xotira"],
+    P: ["Parazitlarga qarshi", "Gijjalar, sodda jonivorlar, bit va qo‘tir"],
+    R: ["Nafas olish tizimi", "Yo‘tal, tumov, tomoq, astma, allergiya"],
+    S: ["Ko‘z va quloq", "Ko‘z va quloq uchun tomchi va malhamlar"],
+    V: ["Boshqalar", "Diagnostika, kontrast, ozuqa"],
+  };
+  const SUB_UZ = {
+    A01: "Stomatologik vositalar", A02: "Kislotalilik, jig‘ildon qaynashi, yara uchun", A03: "Spazm va oshqozon-ichak faoliyati buzilishida",
+    A04: "Ko‘ngil aynishi va qusishga qarshi", A05: "Jigar va o‘t yo‘llari uchun", A06: "Surgi dorilar", A07: "Diareya va ichak infeksiyalarida",
+    A08: "Vazn kamaytirish uchun", A09: "Hazm qilish fermentlari", A10: "Qandli diabetda", A11: "Vitaminlar",
+    A12: "Mineral qo‘shimchalar", A13: "Umumiy quvvatlovchi", A14: "Anabolik vositalar", A15: "Ishtahani ochuvchi",
+    A16: "Oshqozon-ichak va modda almashinuvi uchun boshqalar",
+    B01: "Trombga qarshi", B02: "Qon to‘xtatuvchi", B03: "Kamqonlikda", B05: "Eritmalar va qon o‘rnini bosuvchilar",
+    B06: "Qon uchun boshqalar",
+    C01: "Yurak uchun", C02: "Bosimni pasaytiruvchi", C03: "Siydik haydovchi", C04: "Periferik tomirlarni kengaytiruvchi",
+    C05: "Vena va tomirlar uchun (angioprotektorlar)", C07: "Beta-blokatorlar", C08: "Kalsiy kanallari blokatorlari",
+    C09: "AAF ingibitorlari va sartanlar", C10: "Xolesterinni pasaytiruvchi",
+    D01: "Teri uchun zamburug‘ga qarshi", D02: "Yumshatuvchi va himoyalovchi", D03: "Yara va yaralarni bitkazish uchun", D04: "Qichishishga qarshi",
+    D05: "Psoriazda", D06: "Teri uchun antibiotiklar", D07: "Gormonli malham va kremlar", D08: "Antiseptiklar",
+    D09: "Davolovchi bog‘lamlar", D10: "Husnbuzarga qarshi", D11: "Teri uchun boshqalar",
+    G01: "Ginekologiya uchun mikroblarga qarshi", G02: "Ginekologiya uchun boshqalar", G03: "Jinsiy gormonlar, kontratseptivlar",
+    G04: "Urologiya va prostata uchun",
+    H01: "Gipofiz va gipotalamus gormonlari", H02: "Kortikosteroidlar", H03: "Qalqonsimon bez uchun",
+    H04: "Oshqozon osti bezi gormonlari", H05: "Kalsiy almashinuvi uchun",
+    J01: "Antibiotiklar", J02: "Zamburug‘ga qarshi", J03: "Sulfanilamidlar", J04: "Silga qarshi",
+    J05: "Virusga qarshi", J06: "Zardoblar va immunoglobulinlar", J07: "Vaksinalar",
+    L01: "O‘smaga qarshi", L02: "Gormonal o‘smaga qarshi", L03: "Immunostimulyatorlar", L04: "Immunodepressantlar",
+    M01: "Yallig‘lanishga qarshi (NYaQV)", M02: "Bo‘g‘im va mushak og‘rig‘ida malham va gellar", M03: "Miorelaksantlar",
+    M04: "Podagrada", M05: "Suyaklar uchun (osteoporoz)", M09: "Mushak va bo‘g‘imlar uchun boshqalar",
+    N01: "Anestetiklar", N02: "Og‘riq qoldiruvchi va isitma tushiruvchi", N03: "Epilepsiyaga qarshi",
+    N04: "Parkinson kasalligida", N05: "Tinchlantiruvchi, uxlatuvchi, neyroleptiklar",
+    N06: "Antidepressantlar, nootroplar, xotira uchun", N07: "Asab tizimi uchun boshqalar",
+    P01: "Sodda jonivorlarga qarshi", P02: "Gijjalarga qarshi", P03: "Bit, qo‘tir va hasharotlarga qarshi",
+    R01: "Burun uchun", R02: "Tomoq uchun", R03: "Astma va bronxospazmda", R05: "Yo‘tal va shamollashdan",
+    R06: "Allergiyaga qarshi", R07: "Nafas olish uchun boshqalar",
+    S01: "Ko‘z uchun", S02: "Quloq uchun", S03: "Ko‘z va quloq uchun",
+    V01: "Allergenlar", V03: "Boshqa davolovchi", V04: "Diagnostik", V06: "Davolovchi ozuqa",
+    V07: "Yordamchi (in’eksiya uchun suv va h.k.)", V08: "Kontrast moddalar", V09: "Diagnostik radiofarmpreparatlar",
+    V10: "Davolovchi radiofarmpreparatlar",
+  };
+  // [русское название] → [узбекское, узбекские начала слов (латиницей, приводятся к виду запроса через normalize)]
+  const SYMPTOMS_UZ = {
+    "Кашель": ["Yo‘tal", ["yo‘tal", "yotal", "balg‘am"]],
+    "Простуда и грипп": ["Shamollash va gripp", ["shamolla", "gripp", "tumov"]],
+    "Температура": ["Isitma", ["isitma", "harorat", "qizdirma", "temperatura"]],
+    "Боль": ["Og‘riq", ["og‘riq", "ogriq", "og‘ri"]],
+    "Боль в горле": ["Tomoq og‘rig‘i", ["tomoq", "angina"]],
+    "Насморк": ["Tumov", ["tumov", "burun"]],
+    "Аллергия": ["Allergiya", ["allergi", "qichish", "toshma"]],
+    "Давление": ["Qon bosimi", ["bosim", "gipertoni"]],
+    "Сердце": ["Yurak", ["yurak", "aritmi"]],
+    "Холестерин": ["Xolesterin", ["xolesterin"]],
+    "Диабет": ["Diabet", ["diabet", "qandli"]],
+    "Изжога и гастрит": ["Jig‘ildon qaynashi va gastrit", ["jig‘ildon", "jigildon", "gastrit", "oshqozon"]],
+    "Тошнота и рвота": ["Ko‘ngil aynishi va qusish", ["ko‘ngil", "qusish"]],
+    "Диарея": ["Ich ketishi", ["diareya", "ichketar"]],
+    "Запор": ["Ich qotishi", ["qabziyat", "qotishi"]],
+    "Вздутие и спазмы": ["Dam bo‘lish va spazmlar", ["spazm", "sanchiq", "meteorizm"]],
+    "Печень": ["Jigar", ["jigar"]],
+    "Пищеварение": ["Hazm qilish", ["hazm"]],
+    "Витамины и минералы": ["Vitamin va minerallar", ["vitamin", "mineral"]],
+    "Анемия": ["Kamqonlik", ["kamqon", "anemiya"]],
+    "Тромбы": ["Trombozlar", ["tromb"]],
+    "Кровотечение": ["Qon ketishi", ["qonash", "qonketish"]],
+    "Инфекция, антибиотики": ["Infeksiya, antibiotiklar", ["infeksiya", "antibiotik", "bakteriya"]],
+    "Грибок": ["Zamburug‘", ["zamburug‘", "zamburug"]],
+    "Вирусы и герпес": ["Viruslar va gerpes", ["virus", "gerpes"]],
+    "Глисты": ["Gijjalar", ["gijja", "parazit"]],
+    "Вши и чесотка": ["Bit va qo‘tir", ["qo‘tir", "bit"]],
+    "Суставы и спина": ["Bo‘g‘im va bel", ["bo‘g‘im", "bel", "artrit", "artroz"]],
+    "Мышцы": ["Mushaklar", ["mushak"]],
+    "Подагра": ["Podagra", ["podagra"]],
+    "Кости и остеопороз": ["Suyak va osteoporoz", ["suyak", "osteoporoz"]],
+    "Сон и нервы": ["Uyqu va asab", ["uyqu", "uyqusiz", "asab", "stress", "xavotir"]],
+    "Депрессия": ["Depressiya", ["depressiya"]],
+    "Память и мозг": ["Xotira va miya", ["xotira", "miya"]],
+    "Эпилепсия и судороги": ["Epilepsiya va tirishish", ["epilepsiya", "tirish"]],
+    "Раны и ожоги": ["Yara va kuyish", ["yara", "kuyish", "kuygan"]],
+    "Дерматит и экзема": ["Dermatit va ekzema", ["dermatit", "ekzema"]],
+    "Прыщи и акне": ["Husnbuzar", ["husnbuzar", "akne"]],
+    "Псориаз": ["Psoriaz", ["psoriaz"]],
+    "Глаза": ["Ko‘z", ["ko‘z"]],
+    "Уши": ["Quloq", ["quloq", "otit"]],
+    "Астма и одышка": ["Astma va nafas qisishi", ["astma", "nafas", "hansira"]],
+    "Щитовидная железа": ["Qalqonsimon bez", ["qalqonsimon"]],
+    "Мочевые пути и простата": ["Siydik yo‘llari va prostata", ["sistit", "prostata", "siydik"]],
+    "Контрацепция": ["Kontratseptsiya", ["kontratsep"]],
+    "Потенция": ["Potensiya", ["potensiya", "erektsiya"]],
+    "Похудение": ["Ozish", ["ozish", "semizlik"]],
+    "Иммунитет": ["Immunitet", ["immunitet"]],
+    "Антисептики": ["Antiseptiklar", ["antiseptik", "dezinfek"]],
+  };
+  for (const s of SYMPTOMS) {
+    const uz = SYMPTOMS_UZ[s.name];
+    s.nameRu = s.name;
+    s.nameUz = uz ? uz[0] : s.name;
+    s.keysUz = uz ? uz[1] : [];
+  }
+  let lang = "ru", normalize = (x) => x, uzKeysReady = false;
+
   const api = {
     GROUPS, SUB, SYMPTOMS,
-    group: (code) => GROUPS[(code || "").charAt(0)] || null,
-    sub: (code) => SUB[(code || "").slice(0, 3)] || null,
+    // язык и функция normalize из search.js: узбекские слова симптомов приводим к тому же виду, что и запрос
+    setLang(l, norm) {
+      lang = l === "uz" ? "uz" : "ru";
+      if (norm && !uzKeysReady) {
+        normalize = norm;
+        for (const s of SYMPTOMS) s.keys = s.keys.concat(s.keysUz.map((k) => normalize(k)).filter(Boolean));
+        uzKeysReady = true;
+      }
+      for (const s of SYMPTOMS) s.name = lang === "uz" ? s.nameUz : s.nameRu;
+    },
+    group: (code) => (lang === "uz" ? GROUPS_UZ : GROUPS)[(code || "").charAt(0)] || null,
+    sub: (code) => (lang === "uz" ? SUB_UZ : SUB)[(code || "").slice(0, 3)] || null,
     // симптомы по запросу: слово запроса начинается с ключа («кашля» → «кашл») или ключ — с длинного слова («аллер»)
     symptoms(normQuery) {
       const words = normQuery.split(" ").filter((w) => w.length >= 3);
