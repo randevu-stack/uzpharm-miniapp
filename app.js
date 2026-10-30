@@ -38,7 +38,7 @@
   let favs = store.get("favIds", []);            // id карточек, последние добавленные — первыми
   let viewed = store.get("viewedIds", []);
 
-  // ---------- язык: выбор в профиле, иначе язык Telegram (uz — узбекский), иначе русский ----------
+  // ---------- язык: переключатель O‘Z / RU на главной, иначе язык Telegram (uz — узбекский), иначе русский ----------
   function setLang(l) {
     UzI18n.lang = l === "uz" ? "uz" : "ru";
     UzAtc.setLang(UzI18n.lang, UzSearch.normalize);
@@ -459,13 +459,6 @@
           el("b", { text: String(nFav) }), el("span", { text: T("inFav") })),
         el("button", { class: "pf-stat", type: "button", onclick: () => $("pf-history").scrollIntoView({ behavior: "smooth" }) },
           el("b", { text: String(seen.length) }), el("span", { text: T("viewedN") }))),
-
-      el("div", null, el("div", { class: "pf-label", text: T("langLabel") }),
-        el("div", { class: "pf-group lang" },
-          el("div", { class: "seg", role: "group", "aria-label": T("langLabel") },
-            ...[["ru", "Русский"], ["uz", "O‘zbekcha"]].map(([l, name]) => el("button", { type: "button",
-              class: UzI18n.lang === l ? "on" : "", "aria-pressed": UzI18n.lang === l ? "true" : "false", onclick: () => switchLang(l) }, name))),
-          el("p", { class: "pf-sub lang-sub", text: T("langSub") }))),
 
       el("div", { id: "pf-history" }, el("div", { class: "pf-label", text: T("recent") }),
         el("div", { class: "pf-group" }, ...(seen.length
