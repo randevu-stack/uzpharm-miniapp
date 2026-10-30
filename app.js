@@ -1,8 +1,8 @@
 /* Мини-апп «Справочник лекарств»: поиск по реестру и по симптомам, каталог по группам АТХ, карточка с ценами, фото,
    составом и инструкцией, аналоги по МНН, избранное и профиль (нижние вкладки — как в Jurabekapp).
    Данные — catalog.json и info/*.json (собирает miniapp/build.py), поиск — search.js, группы и симптомы — atc.js.
-   Карточка открывается поверх вкладки через history.pushState (#/d/<id>), чтобы работали «Назад» в Telegram,
-   кнопка «‹ Назад» и свайп вправо. */
+   Навигация — один стек экранов (nav, ниже): каждый переход кладёт экран в стек и в history, «Назад» в Telegram,
+   системный жест, «‹ Назад» и свайп вправо снимают верхний. Приложение закрывается только с главной. */
 (function () {
   "use strict";
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -49,7 +49,7 @@
     document.querySelectorAll("[data-i18n-ph]").forEach((n) => { n.placeholder = T(n.dataset.i18nPh); n.setAttribute("aria-label", T(n.dataset.i18nPh)); });
     document.querySelectorAll("[data-i18n-aria]").forEach((n) => n.setAttribute("aria-label", T(n.dataset.i18nAria)));
     $("chips").replaceChildren(...T("examples").map((x) =>
-      el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; syncSearchUi(); renderList(); } }))));
+      el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; onQuery(true); } }))));
     setUpdated();
   }
   function setUpdated() {
@@ -66,7 +66,7 @@
     if (tab === "catalog") renderCatalog();
     if (tab === "fav") renderFav();
     renderProfile();
-    if (!cardView.hidden) { lastHash = ""; route(); }
+    if (top().card) renderCard(byId.get(top().card));
   }
 
   if (tg) {
@@ -87,12 +87,8 @@
     syncScheme();
     tg.onEvent("themeChanged", syncScheme);
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();   // как в Jurabekapp: прокрутка вниз не сворачивает приложение
-    // кнопка «Назад» Telegram (и системный жест «назад» на Android): из карточки — назад, в поиске — очистить запрос
-    tg.BackButton.onClick(() => {
-      if (!cardView.hidden) goBack();
-      else if (tab === "catalog" && catPath.length) catBack();
-      else if (tab === "search" && input.value) clearSearch();
-    });
+    // кнопка «Назад» Telegram и системный жест «назад»: снять верхний экран стека (видна, пока есть куда вернуться)
+    tg.BackButton.onClick(() => back());
   }
 
   // ---------- маленькие помощники: только textContent, никакого innerHTML с данными реестра ----------
@@ -231,8 +227,9 @@
         return { name, code, key: UzSearch.normalize(name), drugs: list };
       }).filter((x) => x.drugs.length);
       setUpdated();
-      route();                                     // если запрос набрали, пока грузились данные, — покажет результаты
+      if (input.value) renderList();               // запрос набрали, пока грузились данные, — показать результаты
       if (tab === "catalog") renderCatalog();
+      if (byId.has(startId)) open(startId);        // открыли по ссылке на препарат: «Назад» из карточки — на главную
       pullFavs();
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
       (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepare(drugs));
@@ -489,12 +486,7 @@
 
   // ---------- карточка ----------
   function open(id) {
-    history.pushState({ card: true }, "", `#/d/${id}`);   // пометка: эту карточку открыли изнутри приложения
-    route();
-  }
-  function goBack() {
-    if (history.state && history.state.card) history.back();
-    else location.replace("#");                  // карточку открыли по прямой ссылке — назад, а не из приложения
+    push({ card: id }, "card");
   }
 
   function renderCard(d) {
@@ -780,33 +772,17 @@
     }
     $("catalog-body").replaceChildren(
       el("header", { class: "top cat-top" },
-        catPath.length ? el("button", { class: "back cat-back", type: "button", onclick: catBack },
+        catPath.length ? el("button", { class: "back cat-back", type: "button", onclick: back },
           svg('<path d="M15 5l-7 7 7 7"/>'), T("back")) : null,
         el("h1", { text: title }), sub ? el("p", { class: "muted", text: sub }) : null),
       ...body);
+    shownCat = catPath;
   }
-  const catScroll = [];
   function catPush(node) {
-    catScroll.push(window.scrollY);
-    catPath.push(node);
-    renderCatalog();
-    window.scrollTo(0, 0);
-    syncBackButton();
+    push({ cat: [...catPath, node] }, "cat");
   }
-  function catBack() {
-    catPath.pop();
-    renderCatalog();
-    window.scrollTo(0, catScroll.pop() || 0);
-    syncBackButton();
-  }
-  function openCatalog(node) {                   // из поиска или карточки: сразу нужный экран, «Назад» — к группам
-    catPath = [node];
-    catScroll.length = 0;
-    catScroll.push(0);
-    if (tab !== "catalog" || !cardView.hidden) setTab("catalog");   // заодно закроет карточку
-    renderCatalog();
-    window.scrollTo(0, 0);
-    syncBackButton();
+  function openCatalog(node) {                   // с главной, из поиска или карточки: «Назад» — туда, откуда пришли
+    push({ tab: "catalog", cat: [node], card: null }, "cat");
   }
 
   function symptomPicks(q) {
@@ -833,75 +809,127 @@
           el("span", { class: "pf-chev", text: "›" }))))));
   }
 
-  // ---------- вкладки ----------
-  function setTab(name) {
-    if (!cardView.hidden) {                        // вкладку переключили из карточки — закрываем её
-      cardView.hidden = true;
-      document.body.style.overflow = "";
-      history.replaceState(null, "", "#");
-      lastHash = "";
+  // ---------- навигация: стек экранов ----------
+  // Экран — {tab, cat (стопка каталога), card (id карточки или null), q (запрос поиска), kind, y (прокрутка)}.
+  // nav[0] — главная; nav[i] лежит в history.state.nav = i. Переход — push (pushState), «Назад» — history.back(),
+  // popstate обрезает стек и показывает верхний экран. Так системный жест, кнопка Telegram, «‹ Назад» и свайп
+  // ведут одним путём, а кнопка «Назад» Telegram видна ровно тогда, когда есть куда вернуться.
+  const nav = [{ tab: "search", cat: [], card: null, q: "", kind: "home", y: 0 }];
+  let shownCat = null, shownCard = null, afterPop = null;
+  const top = () => nav[nav.length - 1];
+  const sameScreen = (a, b) => a.tab === b.tab && a.card === b.card && a.q === b.q
+    && a.cat.length === b.cat.length && a.cat.every((n, i) => n === b.cat[i]);
+  const url = (e) => (e.card ? `#/d/${e.card}` : location.pathname + location.search);
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";   // прокрутку возвращает show(), не браузер
+
+  function saveY() {
+    const t = top();
+    t.y = t.card ? cardView.scrollTop : window.scrollY;
+    if (t.tab === "search" && !t.card) tabScroll.search = t.y;
+  }
+  function push(patch, kind) {
+    saveY();
+    const e = { ...top(), ...patch, kind, y: patch.y || 0 };
+    nav.push(e);
+    history.pushState({ nav: nav.length - 1 }, "", url(e));
+    show(e);
+  }
+  function replaceTop(patch, kind) {
+    const e = { ...top(), ...patch, kind: kind || top().kind, y: patch.y || 0 };
+    nav[nav.length - 1] = e;
+    history.replaceState({ nav: nav.length - 1 }, "", url(e));
+    show(e);
+  }
+  function back() {
+    if (nav.length > 1) history.back();
+  }
+  function goTo(i, then) {                       // вернуться к экрану nav[i] (ниже текущего), затем then()
+    const steps = i - (nav.length - 1);
+    if (!steps) return then && then();
+    afterPop = then || null;
+    history.go(steps);
+  }
+  window.addEventListener("popstate", (ev) => {
+    const i = ev.state && Number.isInteger(ev.state.nav) ? ev.state.nav : 0;
+    nav.length = Math.min(nav.length, i + 1);    // «Вперёд» в браузере не восстанавливаем — остаёмся на верхнем
+    show(top());
+    const then = afterPop;
+    afterPop = null;
+    if (then) then();
+  });
+
+  function show(e) {
+    const closing = !e.card && !cardView.hidden;
+    if (e.tab !== tab) {
+      tab = e.tab;
+      for (const [k, node] of Object.entries(tabs)) node.hidden = k !== tab;
+      document.querySelectorAll(".nav-item").forEach((b) => {
+        const on = b.dataset.tab === tab;
+        b.classList.toggle("active", on);
+        if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+      });
+      if (tab === "fav") renderFav();
+      if (tab === "profile") renderProfile();
+    } else if (closing) {                          // вернулись из карточки: звёздочку могли снять, история пополнилась
+      if (tab === "fav") renderFav();
+      if (tab === "profile") renderProfile();
     }
-    if (name === tab) {                            // повторное нажатие — наверх, как в Jurabekapp
+    catPath = e.cat;
+    if (tab === "catalog" && shownCat !== catPath) renderCatalog();
+    if (input.value !== e.q) {
+      input.value = e.q;
+      clearTimeout(timer);
+      renderList();
+    }
+    if (e.card) {
+      if (shownCard !== e.card) {
+        renderCard(byId.get(e.card));
+        shownCard = e.card;
+      }
+      cardView.hidden = false;
+      document.body.style.overflow = "hidden";     // вкладка под карточкой не прокручивается
+      cardView.scrollTop = e.y;
+    } else {
+      cardView.hidden = true;
+      shownCard = null;
+      document.body.style.overflow = "";
+      window.scrollTo(0, e.y);
+    }
+    syncSearchUi();
+  }
+
+  // ---------- вкладки ----------
+  // Вкладка — тоже экран стека. Вкладки подряд не копятся: следующая заменяет предыдущую, и «Назад» с любой
+  // вкладки ведёт туда, откуда на вкладки ушли (обычно на главную).
+  function setTab(name) {
+    const t = top();
+    if (name === t.tab && !t.card) {               // повторное нажатие — наверх, как в Jurabekapp
       if (name === "catalog" && catPath.length && window.scrollY < 40) {   // в каталоге уже наверху — к списку групп
-        catPath = [];
-        catScroll.length = 0;
-        renderCatalog();
+        let i = nav.length - 1;
+        while (i > 0 && nav[i - 1].tab === "catalog" && !nav[i - 1].card) i--;
+        if (nav[i].cat.length) goTo(i, () => replaceTop({ cat: [] }));
+        else goTo(i);
+        return;
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
-      syncBackButton();
       return;
     }
-    tabScroll[tab] = window.scrollY;
-    tab = name;
-    for (const [k, node] of Object.entries(tabs)) node.hidden = k !== name;
-    document.querySelectorAll(".nav-item").forEach((b) => {
-      const on = b.dataset.tab === name;
-      b.classList.toggle("active", on);
-      if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
-    });
-    if (name === "fav") renderFav();
-    if (name === "profile") renderProfile();
-    if (name === "catalog") renderCatalog();
-    window.scrollTo(0, name === "search" || name === "catalog" ? tabScroll[name] : 0);
-    syncBackButton();
+    if (t.tab === "search" && !t.card) tabScroll.search = window.scrollY;
+    const e = { tab: name, cat: [], card: null, q: input.value, y: name === "search" ? tabScroll.search : 0 };
+    const below = nav[nav.length - 2];
+    if (below && sameScreen(below, e)) back();    // вкладка, с которой пришли, — просто шаг назад
+    else if (t.kind === "tab") replaceTop(e, "tab");
+    else push(e, "tab");
   }
   document.querySelectorAll(".nav-item").forEach((b) => b.addEventListener("click", () => { haptic(); setTab(b.dataset.tab); }));
 
   function syncBackButton() {
     if (!tg) return;
-    const show = !cardView.hidden || (tab === "search" && !!input.value) || (tab === "catalog" && catPath.length > 0);
-    if (show) tg.BackButton.show(); else tg.BackButton.hide();
+    if (nav.length > 1) tg.BackButton.show(); else tg.BackButton.hide();
   }
-
-  // ---------- маршруты ----------
-  let lastHash = "";
-  function route() {
-    const m = location.hash.match(/^#\/d\/(\d+)$/);
-    const d = m && byId.get(Number(m[1]));
-    if (d) {
-      if (location.hash !== lastHash) {
-        renderCard(d);
-        cardView.scrollTop = 0;
-      }
-      cardView.hidden = false;
-      document.body.style.overflow = "hidden";     // вкладка под карточкой не прокручивается
-    } else {
-      const wasOpen = !cardView.hidden;
-      cardView.hidden = true;
-      document.body.style.overflow = "";
-      if (drugs.length && input.value && !results.childElementCount) renderList();   // пустой экран уже нарисован сразу
-      if (wasOpen && tab === "fav") renderFav();         // звёздочку могли снять в карточке
-      if (wasOpen && tab === "profile") renderProfile(); // и история просмотров пополнилась
-      if (m) history.replaceState(null, "", "#");   // устаревшая ссылка на карточку
-    }
-    syncSearchUi();
-    lastHash = location.hash;
-  }
-  window.addEventListener("popstate", route);
-  window.addEventListener("hashchange", route);
 
   // ---------- кнопка «‹ Назад» и свайп вправо ----------
-  $("back").addEventListener("click", goBack);
+  $("back").addEventListener("click", back);
 
   let sx = 0, sy = 0, dx = 0, mode = "";           // mode: "" — ещё не ясно, "x" — свайп, "y" — прокрутка
   cardView.addEventListener("touchstart", (e) => {
@@ -936,7 +964,7 @@
         cardView.hidden = true;                    // спрятать сразу: history.back() сработает не мгновенно, иначе карточка мелькнёт
         cardView.classList.remove("settle");
         cardView.style.transform = "";
-        goBack();
+        back();
       }, 200);
     }
     mode = "";
@@ -947,29 +975,35 @@
     clearBtn.hidden = !input.value;
     syncBackButton();
   }
-  function clearSearch() {
-    input.value = "";
-    syncSearchUi();
-    renderList();
-    window.scrollTo(0, 0);
-  }
   clearBtn.addEventListener("click", () => {
-    clearSearch();
+    input.value = "";
+    onQuery(true);
     input.focus();
   });
 
+  // запрос на поиске — тоже экран: первый символ кладёт его в стек, и «Назад» очищает поиск; дальше запрос
+  // правится на месте, а стёртый до пустого снимает этот экран
   let timer;
-  input.addEventListener("input", () => {
+  function onQuery(now) {
+    const q = input.value, t = top();
+    if (t.tab === "search" && !t.card) {
+      if (q && !t.q) push({ q, y: window.scrollY }, "q");
+      else if (!q && t.kind === "q") back();
+      else t.q = q;
+    }
     syncSearchUi();
     clearTimeout(timer);
-    timer = setTimeout(renderList, 120);
-  });
+    if (now) renderList(); else timer = setTimeout(renderList, 120);
+  }
+  input.addEventListener("input", () => onQuery());
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
   // пустой экран поиска (примеры, группы, памятка) не зависит от данных — рисуем сразу, не дожидаясь справочника (~0,8 МБ)
   // открыли по ссылке на препарат: кнопка бота (?d=<id>) или ссылка t.me/<бот>/…?startapp=d_<id>
-  const startId = new URLSearchParams(location.search).get("d")
-    || ((inTelegram && tg.initDataUnsafe && /^d_(\d+)$/.exec(tg.initDataUnsafe.start_param || "")) || [])[1];
-  if (/^\d+$/.test(startId || "")) history.replaceState(null, "", `#/d/${startId}`);   // откроет route() после загрузки
+  // (или #/d/<id> — адрес карточки, если страницу перезагрузили); открывает load() после загрузки справочника
+  const startId = Number(new URLSearchParams(location.search).get("d")
+    || ((inTelegram && tg.initDataUnsafe && /^d_(\d+)$/.exec(tg.initDataUnsafe.start_param || "")) || [])[1]
+    || (/^#\/d\/(\d+)$/.exec(location.hash) || [])[1]) || 0;
+  history.replaceState({ nav: 0 }, "", url(nav[0]));   // главная — дно стека
 
   // язык — до первой отрисовки: тексты страницы, примеры запросов; плитки групп ведут в каталог, «Все» — весь каталог
   const tgLang = ((inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.user) || {}).language_code || "";

@@ -3,8 +3,8 @@
    BUILD и PRECACHE вписывает miniapp/build.py: новая сборка — новый BUILD, файлы прошлой сборки удаляются.
    Страница — сначала из сети (свежие цены), без сети — из кеша; файлы с ?v=<хэш> не меняются — сразу из кеша;
    фото — из кеша, последние PHOTO_MAX просмотренных. */
-const BUILD = "3e768eed";
-const PRECACHE = ["./", "app.js?v=a126188e", "i18n.js?v=41f523bd", "search.js?v=99d91a1a", "atc.js?v=e17f847e", "style.css?v=bc228866", "catalog.json?v=c74e2706"];
+const BUILD = "4837048a";
+const PRECACHE = ["./", "app.js?v=77efc067", "i18n.js?v=41f523bd", "search.js?v=99d91a1a", "atc.js?v=e17f847e", "style.css?v=bc228866", "catalog.json?v=c74e2706"];
 const APP = `app-${BUILD}`, PHOTOS = "photos", EXT = "ext";   // EXT — telegram-web-app.js и шрифт
 const PHOTO_MAX = 400;
 const PAGE_TIMEOUT = 4000;                                     // медленная сеть — через 4 с показываем сохранённое
