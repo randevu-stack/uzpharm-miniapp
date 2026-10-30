@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=ec674977">
+  <link rel="stylesheet" href="style.css?v=d10be504">
   <!-- справочник качается сразу, параллельно со скриптами; build.py добавляет ?v=<хэш>, адрес берёт app.js -->
   <link id="data" rel="preload" href="catalog.json?v=c74e2706" as="fetch" crossorigin>
 </head>
@@ -19,7 +19,10 @@
       <div class="hero">
         <div class="brand">
           <span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
-          <div><b data-i18n="appName">Справочник лекарств</b><small id="updated">Предельные цены на сегодня</small></div>
+          <div class="brand-t"><b data-i18n="appName">Справочник лекарств</b><small id="updated">Предельные цены на сегодня</small></div>
+          <div class="lang-sw" role="group" data-i18n-aria="langLabel" aria-label="Язык">
+            <button type="button" data-lang="uz">O‘Z</button><button type="button" data-lang="ru">RU</button>
+          </div>
         </div>
         <h1 data-i18n-html="heroTitle">Проверьте цену<br>лекарства за 5 секунд</h1>
       </div>
@@ -112,6 +115,6 @@
   <script src="i18n.js?v=41f523bd"></script>
   <script src="search.js?v=99d91a1a"></script>
   <script src="atc.js?v=e17f847e"></script>
-  <script src="app.js?v=77efc067"></script>
+  <script src="app.js?v=15b55192"></script>
 </body>
 </html>

@@ -48,6 +48,11 @@
     document.querySelectorAll("[data-i18n-html]").forEach((n) => { n.innerHTML = T(n.dataset.i18nHtml); });   // только свои строки из i18n.js
     document.querySelectorAll("[data-i18n-ph]").forEach((n) => { n.placeholder = T(n.dataset.i18nPh); n.setAttribute("aria-label", T(n.dataset.i18nPh)); });
     document.querySelectorAll("[data-i18n-aria]").forEach((n) => n.setAttribute("aria-label", T(n.dataset.i18nAria)));
+    document.querySelectorAll(".lang-sw button").forEach((b) => {
+      const on = b.dataset.lang === UzI18n.lang;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
     $("chips").replaceChildren(...T("examples").map((x) =>
       el("li", null, el("button", { type: "button", text: x, onclick: () => { input.value = x; onQuery(true); } }))));
     setUpdated();
@@ -1013,6 +1018,7 @@
     openCatalog(b.dataset.g ? { type: "g", code: b.dataset.g } : { type: "s", code: b.dataset.s });
   }));
   tabs.search.querySelector("[data-all]").addEventListener("click", () => setTab("catalog"));
+  document.querySelectorAll(".lang-sw button").forEach((b) => b.addEventListener("click", () => switchLang(b.dataset.lang)));
 
   renderList();
   if (!inTelegram && !startId) input.focus();
