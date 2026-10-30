@@ -254,7 +254,7 @@
         rest ? el("span", { class: "item-form", text: rest }) : null,
         el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
       el("span", { class: "item-price" }, p ? el("b", { text: num(p) }) : null,
-        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? T("sum") : T("noPrice"),
+        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? T("sum") : T(d.rx ? "noPrice" : "freePrice"),
         el("span", { class: d.rx ? "rx-tag rx" : "rx-tag otc", text: d.rx ? T("rx") : T("otc") })));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
@@ -508,11 +508,13 @@
         d.uz ? el("span", { class: "badge uz", text: T("uzMade") }) : null));
 
     // цена: одна упаковка — крупно; несколько — крупно минимальная и список упаковок
-    const p = minPrice(d);
+    // безрецептурным предельную цену не назначают (с 01.04.2025) — так и пишем, а не «не установлена»
+    const p = minPrice(d), free = !p && !d.rx;
     const price = el("section", { class: "price" + (p ? "" : " none") },
-      el("small", { text: d.prices.length > 1 && p ? T("priceFrom") : T("price") }),
-      p ? el("b", null, num(p), el("i", { text: " " + T("sum") })) : el("b", { class: "price-none", text: T("priceNone") }),
-      p ? el("span", { class: "price-ok" }, svg(ICO.check), T("priceOk")) : null);
+      el("small", { text: free ? T("priceFreeLabel") : d.prices.length > 1 && p ? T("priceFrom") : T("price") }),
+      p ? el("b", null, num(p), el("i", { text: " " + T("sum") })) : el("b", { class: "price-none", text: T(free ? "priceFree" : "priceNone") }),
+      p ? el("span", { class: "price-ok" }, svg(ICO.check), T("priceOk")) : null,
+      free ? el("p", { class: "price-note", text: T("priceFreeNote") }) : null);
     if (d.prices.length > 1) {
       price.append(el("ul", { class: "packs" }, ...d.prices.map(([pack, retail]) => el("li", null,
         el("span", { text: pack || T("pack") }), el("b", { text: retail ? sum(retail) : T("noPrice") })))));
@@ -560,7 +562,7 @@
         t.classList.add("an-pic");
         return el("button", { class: "an", type: "button", onclick: () => open(a.id) }, t,
           el("b", { text: splitName(a).brand }), el("small", { class: "an-form", text: splitName(a).rest }), el("small", { text: a.maker }),
-          el("span", { class: "an-p" }, ap ? sum(ap) : T("noPrice"),
+          el("span", { class: "an-p" }, ap ? sum(ap) : T(a.rx ? "noPrice" : "freePrice"),
             saves.has(a.id) ? el("em", { text: `−${saves.get(a.id)} %` }) : null));
       }));
       const all = el("button", { class: "sec-link", type: "button", text: analogs.length > 1 ? T("asList") : "" });

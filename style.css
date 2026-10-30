@@ -161,7 +161,8 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .price-ok svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .price.none { background: var(--bg); color: var(--text); box-shadow: none; border: 1px solid var(--line); }
 .price .price-none { font-size: 20px; letter-spacing: 0; }
-.price.none small { color: var(--hint); }   /* цены нет — светлый блок, подпись серая, а не мятная */
+.price.none small { color: var(--hint); }
+.price-note { margin: 6px 0 0; color: var(--hint); font-size: 13.5px; line-height: 1.4; }   /* цены нет — светлый блок, подпись серая, а не мятная */
 .packs { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, .22); font-size: 13.5px; }
 .packs li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
 .packs span { color: var(--price-sub); overflow-wrap: anywhere; }
