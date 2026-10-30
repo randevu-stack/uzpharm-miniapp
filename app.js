@@ -26,6 +26,7 @@
   const tabs = { search: $("tab-search"), catalog: $("tab-catalog"), fav: $("tab-fav"), profile: $("tab-profile") };
 
   let drugs = [], byId = new Map(), byInn = new Map(), byInfo = new Map(), diseases = [];
+  let shopsDate = "";                               // на какую дату цены в аптеках (d.shop)
   let tab = "search";
   const tabScroll = { search: 0, catalog: 0, fav: 0, profile: 0 };
   let catPath = [];                  // каталог: стопка экранов [{type, …}], пустая — список групп
@@ -202,12 +203,14 @@
       const f = Object.fromEntries(data.fields.map((name, i) => [name, i]));
       const dicts = data.dicts || {};               // формат catalog.json — в miniapp/build.py
       const v = (a, name) => (dicts[name] ? dicts[name][a[f[name]]] : a[f[name]]);
+      const shops = data.shops || {};               // безрецептурные: [от, до, аптек] в Ташкенте
+      shopsDate = data.shopsDate || "";
       drugs = data.drugs.map((a) => {
         const d = {
           id: a[f.id], trade: a[f.name], inn: v(a, "inn"), form: v(a, "form"), dosage: v(a, "dosage"), maker: v(a, "maker"),
           rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: v(a, "expires"), photo: a[f.photo], level: v(a, "level"),
           uz: !!a[f.uz], atc: v(a, "atc") || "", comp: v(a, "comp") || "", route: v(a, "route") || "",
-          shelf: v(a, "shelf") || "", info: v(a, "info") || "",
+          shelf: v(a, "shelf") || "", info: v(a, "info") || "", shop: shops[a[f.id]] || null,
         };
         d.prices = a[f.prices].map(([pack, retail]) => [pack === 0 ? d.trade : pack, retail]);   // 0 — как название
         // поля для search.js — как search_content в базе бота
@@ -253,8 +256,8 @@
       el("span", { class: "item-body" }, el("span", { class: "item-name", text: brand }),
         rest ? el("span", { class: "item-form", text: rest }) : null,
         el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
-      el("span", { class: "item-price" }, p ? el("b", { text: num(p) }) : null,
-        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p ? T("sum") : T(d.rx ? "noPrice" : "freePrice"),
+      el("span", { class: "item-price" }, p ? el("b", { text: num(p) }) : d.shop ? el("b", { text: T("shopFrom", { n: num(d.shop[0]) }) }) : null,
+        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p || d.shop ? T("sum") : T(d.rx ? "noPrice" : "freePrice"),
         el("span", { class: d.rx ? "rx-tag rx" : "rx-tag otc", text: d.rx ? T("rx") : T("otc") })));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
@@ -509,12 +512,19 @@
 
     // цена: одна упаковка — крупно; несколько — крупно минимальная и список упаковок
     // безрецептурным предельную цену не назначают (с 01.04.2025) — так и пишем, а не «не установлена»
-    const p = minPrice(d), free = !p && !d.rx;
-    const price = el("section", { class: "price" + (p ? "" : " none") },
-      el("small", { text: free ? T("priceFreeLabel") : d.prices.length > 1 && p ? T("priceFrom") : T("price") }),
-      p ? el("b", null, num(p), el("i", { text: " " + T("sum") })) : el("b", { class: "price-none", text: T(free ? "priceFree" : "priceNone") }),
-      p ? el("span", { class: "price-ok" }, svg(ICO.check), T("priceOk")) : null,
-      free ? el("p", { class: "price-note", text: T("priceFreeNote") }) : null);
+    const p = minPrice(d), free = !p && !d.rx, shop = free && d.shop;
+    // есть цены аптек — разброс «от–до» на зелёном блоке, как настоящая цена; нет — честно «свободная»
+    const price = shop
+      ? el("section", { class: "price shop" },
+        el("small", { text: T("shopLabel") }),
+        el("b", null, shop[0] === shop[1] ? num(shop[0]) : `${num(shop[0])} – ${num(shop[1])}`, el("i", { text: " " + T("sum") })),
+        el("span", { class: "price-ok" }, T("shopCount", { n: shop[2], s: plural(shop[2], "аптеке", "аптеках", "аптеках"), date: date(shopsDate) })),
+        el("p", { class: "price-note", text: T("shopNote") }))
+      : el("section", { class: "price" + (p ? "" : " none") },
+        el("small", { text: free ? T("priceFreeLabel") : d.prices.length > 1 && p ? T("priceFrom") : T("price") }),
+        p ? el("b", null, num(p), el("i", { text: " " + T("sum") })) : el("b", { class: "price-none", text: T(free ? "priceFree" : "priceNone") }),
+        p ? el("span", { class: "price-ok" }, svg(ICO.check), T("priceOk")) : null,
+        free ? el("p", { class: "price-note", text: T("priceFreeNote") }) : null);
     if (d.prices.length > 1) {
       price.append(el("ul", { class: "packs" }, ...d.prices.map(([pack, retail]) => el("li", null,
         el("span", { text: pack || T("pack") }), el("b", { text: retail ? sum(retail) : T("noPrice") })))));
@@ -562,7 +572,7 @@
         t.classList.add("an-pic");
         return el("button", { class: "an", type: "button", onclick: () => open(a.id) }, t,
           el("b", { text: splitName(a).brand }), el("small", { class: "an-form", text: splitName(a).rest }), el("small", { text: a.maker }),
-          el("span", { class: "an-p" }, ap ? sum(ap) : T(a.rx ? "noPrice" : "freePrice"),
+          el("span", { class: "an-p" }, ap ? sum(ap) : a.shop ? T("shopFrom", { n: sum(a.shop[0]) }) : T(a.rx ? "noPrice" : "freePrice"),
             saves.has(a.id) ? el("em", { text: `−${saves.get(a.id)} %` }) : null));
       }));
       const all = el("button", { class: "sec-link", type: "button", text: analogs.length > 1 ? T("asList") : "" });

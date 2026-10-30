@@ -57,6 +57,8 @@
     // безрецептурные: с 01.04.2025 предельных цен нет (указ о развитии фармотрасли от 28.01.2025)
     priceFreeLabel: "Цена", priceFree: "свободная",
     priceFreeNote: "На безрецептурные лекарства предельной цены нет — аптека назначает цену сама. Сравните в нескольких аптеках.",
+    shopLabel: "Цены в аптеках Ташкента", shopFrom: "от {n}", shopCount: "в {n} {s} · на {date}",
+    shopNote: "Предельной цены на безрецептурные нет — у каждой аптеки своя. Если просят дороже верхней цены, загляните в другую аптеку.",
     priceOk: "Дороже продавать нельзя", pack: "Упаковка",
     checkTitle: "Мне продают дороже?",
     checkPlaceholder: "Цена в аптеке",
@@ -142,6 +144,8 @@
     priceFrom: "Chegaraviy narx — dan", price: "Chegaraviy narx", priceNone: "belgilanmagan",
     priceFreeLabel: "Narx", priceFree: "erkin",
     priceFreeNote: "Retseptsiz dorilarga chegaraviy narx belgilanmaydi — dorixona narxni o‘zi qo‘yadi. Bir nechta dorixonada solishtiring.",
+    shopLabel: "Toshkent dorixonalaridagi narxlar", shopFrom: "{n} dan", shopCount: "{n} ta dorixonada · {date} holatiga",
+    shopNote: "Retseptsiz dorilarga chegaraviy narx yo‘q — har bir dorixonada o‘z narxi. Yuqori narxdan qimmat so‘rashsa, boshqa dorixonaga kiring.",
     priceOk: "Undan qimmat sotish mumkin emas", pack: "Qadoq",
     checkTitle: "Menga qimmat sotishyaptimi?",
     checkPlaceholder: "Dorixonadagi narx",
