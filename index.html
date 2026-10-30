@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=4b69ac3a">
+  <link rel="stylesheet" href="style.css?v=10885b01">
   <!-- справочник качается сразу, параллельно со скриптами; build.py добавляет ?v=<хэш>, адрес берёт app.js -->
   <link id="data" rel="preload" href="catalog.json?v=27504aab" as="fetch" crossorigin>
 </head>
@@ -41,6 +41,12 @@
       <!-- пустой экран поиска: примеры, группы и памятка; данных не требует — виден сразу -->
       <div id="home" class="home">
         <ul id="chips" class="chips"></ul>
+        <!-- «Проверить рецепт»: назначенное врачом → переплата и аналоги дешевле (рисует app.js, renderRecipe) -->
+        <button id="rx-open" type="button" class="rx-cta">
+          <span class="rx-cta-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+          <span class="rx-cta-t"><b data-i18n="rxCta">Проверить рецепт</b><small data-i18n="rxCtaSub">Впишите, что назначил врач, — покажем, где можно сэкономить</small></span>
+          <span class="pf-chev">›</span>
+        </button>
         <!-- иконки групп — Health Icons (github.com/resolvetosavelives/healthicons, CC0), как в Jurabekapp -->
         <section class="groups">
           <div class="sec-h"><h2 data-i18n="groupsTitle">Подбор по группам</h2><button type="button" class="sec-link" data-all data-i18n="all">Все</button></div>
@@ -65,6 +71,11 @@
     <!-- вкладка «Каталог»: группы АТХ → подгруппы → вещества → препараты (рисует app.js) -->
     <section id="tab-catalog" class="tab" hidden>
       <div id="catalog-body"></div>
+    </section>
+
+    <!-- «Проверить рецепт» — экран без кнопки внизу, открывается с главной -->
+    <section id="tab-recipe" class="tab" hidden>
+      <div id="recipe-body"></div>
     </section>
 
     <!-- вкладка «Избранное» -->
@@ -112,9 +123,9 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="i18n.js?v=ccaae87c"></script>
+  <script src="i18n.js?v=b20b888d"></script>
   <script src="search.js?v=99d91a1a"></script>
   <script src="atc.js?v=e17f847e"></script>
-  <script src="app.js?v=7c993baa"></script>
+  <script src="app.js?v=81916fa5"></script>
 </body>
 </html>

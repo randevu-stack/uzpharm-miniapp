@@ -419,3 +419,62 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .check-res small { display: block; margin: 4px 0 0 28px; font-size: 13px; }
 .check-res.ok { color: var(--ok-text); background: var(--ok-bg); }
 .check-res.bad { color: var(--bad-text); background: var(--bad-bg); }
+
+/* ---------- «Проверить рецепт» ---------- */
+.rx-cta { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); margin: 16px 16px 0; padding: 14px;
+  border: 0; border-radius: 20px; background: var(--price-bg); color: var(--price-text); text-align: left; font: inherit; cursor: pointer;
+  box-shadow: 0 14px 30px -16px rgba(6, 78, 59, .55); transition: transform .15s var(--press); }
+.rx-cta:active { transform: scale(.98); }
+.rx-cta-i { width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center; background: rgba(255, 255, 255, .14); }
+.rx-cta-i svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rx-cta-t { flex: 1; min-width: 0; }
+.rx-cta-t b { display: block; font-size: 16px; }
+.rx-cta-t small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.35; color: var(--price-sub); }
+.rx-cta .pf-chev { color: var(--price-sub); }
+.rx-search { margin: 0 16px 12px; }
+.rx-sugg:empty { display: none; }
+.rx-none { margin: 0 4px; }
+.rx-add { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 800; font-size: 18px;
+  background: var(--chip); color: var(--chip-text); }
+.rx-add.on { background: var(--ok-text); color: var(--ok-bg); font-size: 15px; }
+.rx-list { display: flex; flex-direction: column; gap: 10px; margin: 0 16px; }
+.rx-item { padding: 12px 12px 12px 14px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.rx-item-h { display: flex; gap: 10px; align-items: flex-start; }
+.rx-del { flex: none; display: grid; place-items: center; width: 34px; height: 34px; margin: -4px -4px 0 0; border: 0; border-radius: 50%;
+  background: var(--bg2); color: var(--hint); cursor: pointer; }
+.rx-del svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.rx-paid-box { margin-top: 10px; height: 44px; }
+.rx-paid { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 16px; font-weight: 700; }
+.rx-paid::placeholder { font-weight: 500; font-size: 14px; color: var(--hint); }
+.rx-empty { margin: 4px 4px 0; }
+.rx-go { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 32px); min-height: 52px; margin: 16px 16px 0;
+  border: 0; border-radius: 16px; background: var(--accent); color: var(--accent-text); font: inherit; font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: transform .15s var(--press); }
+.rx-go:active { transform: scale(.98); }
+.rx-go.off { background: var(--chip); color: var(--chip-text); }
+.rx-go svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.rx-sum { margin: 0 16px 12px; }
+.rx-card { margin: 0 16px 10px; padding: 12px 14px 14px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.rx-card-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: none; color: inherit;
+  font: inherit; text-align: left; cursor: pointer; }
+.rx-price { margin: 6px 0 0; font-size: 13.5px; color: var(--hint); font-variant-numeric: tabular-nums; }
+.rx-flag { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 8px 10px; border-radius: 12px;
+  font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.rx-flag svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.rx-flag.bad { color: var(--bad-text); background: var(--bad-bg); }
+.rx-flag.ok { color: var(--ok-text); background: var(--ok-bg); }
+.rx-flag.warn { color: var(--text); background: var(--bg2); }
+.rx-over-total { margin: 0 16px 12px; }
+.rx-alt { display: block; width: 100%; margin-top: 10px; padding: 10px 12px; border: 0; border-radius: 14px; background: var(--ok-bg);
+  color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: transform .15s var(--press); }
+.rx-alt:active { transform: scale(.98); }
+.rx-alt small { display: block; font-size: 12px; color: var(--ok-text); font-weight: 600; }
+.rx-alt-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 2px; font-size: 15px; }
+.rx-alt-row span { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rx-alt-sub { display: block; margin-top: 2px; font-size: 12.5px; color: var(--hint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rx-pct { display: inline-block; margin-top: 6px; padding: 2px 9px; border-radius: 999px; font-style: normal; font-size: 12.5px; font-weight: 800;
+  background: var(--ok-text); color: var(--ok-bg); }
+.rx-best { margin: 8px 0 0; }
+.rx-note { margin: 4px 20px 0; }
+.rx-edit { width: calc(100% - 32px); margin: 10px 16px 24px; }
+.rx-sugg .item-form, .rx-item .item-form, .rx-card .item-form { white-space: normal; display: block; -webkit-line-clamp: unset; overflow: visible; }   /* дозировку и фасовку видно целиком: по ним и выбирают */

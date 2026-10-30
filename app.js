@@ -23,7 +23,8 @@
   const $ = (id) => document.getElementById(id);
   const input = $("q"), statusEl = $("status"), results = $("results"), clearBtn = $("clear");
   const cardView = $("card-view"), cardBody = $("card");
-  const tabs = { search: $("tab-search"), catalog: $("tab-catalog"), fav: $("tab-fav"), profile: $("tab-profile") };
+  const tabs = { search: $("tab-search"), catalog: $("tab-catalog"), fav: $("tab-fav"), profile: $("tab-profile"),
+    recipe: $("tab-recipe") };   // «Проверить рецепт» — экран без кнопки внизу
 
   let drugs = [], byId = new Map(), byInn = new Map(), byInfo = new Map(), diseases = [];
   let shopsDate = "";                               // на какую дату цены в аптеках (d.shop)
@@ -237,6 +238,7 @@
       setUpdated();
       if (input.value) renderList();               // запрос набрали, пока грузились данные, — показать результаты
       if (tab === "catalog") renderCatalog();
+      if (tab === "recipe") renderRecipe(!!top().res);
       if (byId.has(startId)) open(startId);        // открыли по ссылке на препарат: «Назад» из карточки — на главную
       pullFavs();
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
@@ -819,6 +821,192 @@
           el("span", { class: "pf-chev", text: "›" }))))));
   }
 
+  // ---------- «Проверить рецепт»: что назначил врач → переплата и аналоги дешевле ----------
+  // Экран без своей вкладки внизу: tab "recipe"; res — показать результат (шаг поверх ввода, «Назад» — к вводу).
+  // Список хранится в телефоне: [{id, paid}] — paid — сколько заплатили (необязательно).
+  let recipe = store.get("recipe", []), shownRec = null;
+  const saveRecipe = () => store.set("recipe", recipe);
+  const packN = (s) => Number((/№\s*(\d+)/.exec(s || "") || [])[1]) || 0;
+  // цена для сравнения: предельная (самая дешёвая упаковка) или «от» в аптеках для безрецептурных
+  function refPrice(d) {
+    const pk = d.prices.filter(([, r]) => r).sort((a, b) => a[1] - b[1])[0];
+    if (pk) return { price: pk[1], n: packN(pk[0]), kind: "limit" };
+    if (!d.rx && d.shop) return { price: d.shop[0], n: packN(d.trade), kind: "shop" };
+    return null;
+  }
+  const refUnit = (d) => { const r = refPrice(d); return r && r.n ? r.price / r.n : null; };
+  // дозировка из названия: «5 мг», «60 мг + 5 мг», «100 мг/5мл» — поле dosage в реестре бывает неверным
+  // (у Конкора 5 мг там «14.5 миллиграмм»), а форма — разной записью одного и того же («Таблетки» / «…покрытые оболочкой»)
+  const doseKey = (d) => (d.trade.toLowerCase().replace(/,/g, ".").match(/\d+(?:\.\d+)?\s*(?:мг|мкг|ме|г|мл|%)(?![а-я])/g) || [])
+    .map((s) => s.replace(/\s+/g, "")).sort().join("+");
+  const slowRelease = (d) => /пролонг|модифиц|замедл|ретард/i.test(d.trade + " " + d.form);
+  const sameRecipeDose = (a, d) => {
+    const ka = doseKey(a), kd = doseKey(d);
+    if (!ka || !kd) return sameDose(a, d);
+    return ka === kd && formCat(a) === formCat(d) && slowRelease(a) === slowRelease(d);
+  };
+  // аналог дешевле: то же вещество, форма и дозировка, цена за штуку; среди выгодных Jurabek первым, как в карточке.
+  // Тот же препарат того же производителя в другой фасовке — не аналог
+  function cheaperAnalog(d) {
+    const mine = refUnit(d);
+    if (!mine || !d.innKey) return null;
+    const brand = UzSearch.normalize(splitName(d).brand);
+    const list = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id && sameRecipeDose(a, d)
+      && !(a.maker === d.maker && UzSearch.normalize(splitName(a).brand) === brand))
+      .map((a) => ({ a, u: refUnit(a) })).filter((x) => x.u && (1 - x.u / mine) * 100 >= SAVE_MIN);
+    list.sort((x, y) => UzSearch.prio(x.a) - UzSearch.prio(y.a) || x.u - y.u);
+    return list[0] ? { a: list[0].a, pct: Math.round((1 - list[0].u / mine) * 100), unit: list[0].u } : null;
+  }
+  // разбор одной позиции рецепта
+  function recipeLine(item) {
+    const d = byId.get(item.id), ref = refPrice(d), paid = item.paid || 0;
+    const limits = d.prices.map(([, r]) => r).filter(Boolean);
+    const out = { d, ref, paid, over: 0, aboveShops: 0, best: cheaperAnalog(d), save: 0 };
+    // переплату считаем от самой дорогой упаковки карточки: лучше промолчать, чем зря обвинить аптеку
+    if (paid && limits.length && paid > Math.max(...limits)) out.over = paid - Math.max(...limits);
+    else if (paid && !limits.length && !d.rx && d.shop && paid > d.shop[1]) out.aboveShops = paid - d.shop[1];
+    if (out.best && ref && ref.n) out.save = Math.max(0, Math.round((paid || ref.price) - out.best.unit * ref.n));
+    return out;
+  }
+  const recipeCount = (n) => (UzI18n.lang === "uz" ? `${n} ta dori` : `${n} ${plural(n, "лекарство", "лекарства", "лекарств")}`);
+  function openRecipe() {
+    push({ tab: "recipe", cat: [], card: null, res: false }, "recipe");
+  }
+  function recipeHead(title, sub) {
+    return el("header", { class: "top cat-top" },
+      el("button", { class: "back cat-back", type: "button", onclick: back }, svg('<path d="M15 5l-7 7 7 7"/>'), T("back")),
+      el("h1", { text: title }), sub ? el("p", { class: "muted", text: sub }) : null);
+  }
+  function renderRecipe(res) {
+    shownRec = res;
+    const body = $("recipe-body");
+    if (!drugs.length) return body.replaceChildren(recipeHead(T("rxTitle")), el("p", { class: "status", text: T("loading") }));
+    recipe = recipe.filter((it) => byId.has(it.id));  // карточку могли убрать из реестра
+    if (res && recipe.length) return renderRecipeResult(body);
+    // ввод: поиск с подсказками + список назначенного
+    const field = el("input", { type: "search", class: "rx-q", placeholder: T("rxPlaceholder"), "aria-label": T("rxPlaceholder"),
+      autocomplete: "off", autocapitalize: "off", spellcheck: "false", enterkeyhint: "search" });
+    const sugg = el("ul", { class: "list rx-sugg" });
+    const listBox = el("div", { class: "rx-list" });
+    const go = el("button", { class: "rx-go", type: "button" });
+    const suggest = () => {
+      const q = field.value;
+      sugg.replaceChildren();
+      if (UzSearch.normalize(q).replace(/ /g, "").length < 2) return;
+      const { items } = UzSearch.search(drugs, q, 8);
+      if (!items.length) return sugg.append(el("li", { class: "hint rx-none", text: T("nothing") }));
+      sugg.append(...items.map((d) => {
+        const { brand, rest } = splitName(d);
+        const added = recipe.some((it) => it.id === d.id);
+        return el("li", null, el("button", { class: "item", type: "button", onclick: () => {
+          haptic();
+          if (!added) recipe.push({ id: d.id, paid: 0 });
+          saveRecipe();
+          field.value = "";
+          sugg.replaceChildren();
+          drawList();
+          field.focus();
+        } }, thumb(d),
+        el("span", { class: "item-body" }, el("span", { class: "item-name", text: brand }),
+          rest ? el("span", { class: "item-form", text: rest }) : null, el("span", { class: "item-sub", text: d.maker })),
+        el("span", { class: "rx-add" + (added ? " on" : ""), text: added ? "✓" : "+" })));
+      }));
+    };
+    let t;
+    field.addEventListener("input", () => { clearTimeout(t); t = setTimeout(suggest, 120); });
+    field.addEventListener("keydown", (e) => { if (e.key === "Enter") field.blur(); });
+    function drawList() {
+      listBox.replaceChildren(...recipe.map((it) => {
+        const d = byId.get(it.id), { brand, rest } = splitName(d);
+        const paid = el("input", { class: "rx-paid", type: "text", inputmode: "numeric", autocomplete: "off",
+          placeholder: T("rxPaid"), "aria-label": T("rxPaid"), enterkeyhint: "done", value: it.paid ? num(it.paid) : "" });
+        paid.addEventListener("input", () => { it.paid = Number(paid.value.replace(/\D/g, "")) || 0; saveRecipe(); });
+        paid.addEventListener("keydown", (e) => { if (e.key === "Enter") paid.blur(); });
+        return el("div", { class: "rx-item" },
+          el("div", { class: "rx-item-h" },
+            el("span", { class: "item-body" }, el("span", { class: "item-name", text: brand }), rest ? el("span", { class: "item-form", text: rest }) : null),
+            el("button", { class: "rx-del", type: "button", "aria-label": T("rxRemove"), onclick: () => {
+              recipe = recipe.filter((x) => x !== it);
+              saveRecipe();
+              drawList();
+            } }, svg(ICO.x))),
+          el("label", { class: "check-box rx-paid-box" }, paid, el("span", { text: T("sum") })));
+      }));
+      if (!recipe.length) listBox.append(el("p", { class: "hint rx-empty", text: T("rxEmpty") }));
+      go.textContent = recipe.length ? T("rxGo", { n: recipeCount(recipe.length) }) : T("rxGoEmpty");
+      go.classList.toggle("off", !recipe.length);
+    }
+    go.addEventListener("click", () => {
+      if (!recipe.length) { toast(T("rxGoEmpty")); field.focus(); return; }
+      haptic();
+      push({ res: true }, "recipe");
+    });
+    drawList();
+    body.replaceChildren(recipeHead(T("rxTitle"), T("rxSub")),
+      el("label", { class: "search rx-search" }, svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'), field),
+      sugg, listBox, go);
+  }
+  function renderRecipeResult(body) {
+    const lines = recipe.map(recipeLine);
+    const total = lines.reduce((s, x) => s + x.save, 0), over = lines.reduce((s, x) => s + x.over, 0);
+    const nSave = lines.filter((x) => x.save > 0).length;
+    const summary = total > 0
+      ? el("section", { class: "price rx-sum" }, el("small", { text: T("rxCanSave") }),
+        el("b", null, `${T("rxUpTo")}${num(total)}`, el("i", { text: " " + T("sum") })),
+        el("span", { class: "price-ok", text: T("rxSaveSub", { n: nSave, total: lines.length }) }))
+      : el("section", { class: "price none rx-sum" }, el("small", { text: T("rxResult") }),
+        el("b", { class: "price-none", text: T("rxNoSave") }), el("p", { class: "price-note", text: T("rxNoSaveNote") }));
+    const cards = lines.map((x) => {
+      const { brand, rest } = splitName(x.d);
+      const priceLine = x.ref && x.ref.kind === "limit" ? T("rxLimit", { s: sum(x.ref.price) })
+        : !x.d.rx && x.d.shop ? T("rxShops", { a: num(x.d.shop[0]), b: sum(x.d.shop[1]) })
+          : T(x.d.rx ? "rxNoLimit" : "rxFree");
+      const flag = x.over ? el("p", { class: "rx-flag bad" }, svg(ICO.x), T("rxOver", { d: sum(x.over) }))
+        : x.aboveShops ? el("p", { class: "rx-flag warn" }, svg(ICO.info), T("rxAboveShops", { d: sum(x.aboveShops) }))
+          : x.paid && x.ref ? el("p", { class: "rx-flag ok" }, svg(ICO.check), T("rxPaidOk")) : null;
+      let alt;
+      if (x.best) {
+        const a = x.best.a, ap = refPrice(a);
+        alt = el("button", { class: "rx-alt", type: "button", onclick: () => open(a.id) },
+          el("small", { text: T("rxAnalog") }),
+          el("span", { class: "rx-alt-row" }, el("b", { text: splitName(a).brand }),
+            el("span", { text: ap.kind === "shop" ? T("shopFrom", { n: num(ap.price) }) : num(ap.price) })),
+          el("span", { class: "rx-alt-sub", text: `${splitName(a).rest} · ${a.maker}` }),
+          el("em", { class: "rx-pct", text: T("rxCheaper", { p: x.best.pct }) }));
+      } else {
+        alt = el("p", { class: "hint rx-best", text: T(x.ref ? "rxIsBest" : "rxNoCompare") });
+      }
+      return el("section", { class: "rx-card" },
+        el("button", { class: "rx-card-h", type: "button", onclick: () => open(x.d.id) },
+          el("span", { class: "item-body" }, el("span", { class: "item-name", text: brand }),
+            rest ? el("span", { class: "item-form", text: rest }) : null),
+          el("span", { class: "pf-chev", text: "›" })),
+        el("p", { class: "rx-price", text: priceLine }), flag, alt);
+    });
+    const shareBtn = el("button", { class: "rx-go", type: "button", onclick: () => shareRecipe(total) }, svg(ICO.share), T("rxShare"));
+    body.replaceChildren(recipeHead(T("rxResult")),
+      summary,
+      over ? el("p", { class: "rx-flag bad rx-over-total" }, svg(ICO.x), T("rxOverTotal", { d: sum(over) })) : null,
+      ...cards,
+      el("p", { class: "hint rx-note", text: T("rxNote") }),
+      shareBtn,
+      el("button", { class: "more rx-edit", type: "button", text: T("rxEdit"), onclick: back }));
+  }
+  function shareRecipe(total) {
+    haptic();
+    const link = `https://t.me/${BOT}`;
+    const text = total > 0 ? T("rxShareText", { s: sum(total) }) : T("rxShareText0");
+    try {
+      if (inTelegram && tg.openTelegramLink) {
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+        return;
+      }
+    } catch (e) { /* старый клиент — ниже */ }
+    if (navigator.share) navigator.share({ text, url: link }).catch(() => {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(`${text}\n${link}`).then(() => toast(T("linkCopied")), () => toast(link));
+    else toast(link);
+  }
+
   // ---------- навигация: стек экранов ----------
   // Экран — {tab, cat (стопка каталога), card (id карточки или null), q (запрос поиска), kind, y (прокрутка)}.
   // nav[0] — главная; nav[i] лежит в history.state.nav = i. Переход — push (pushState), «Назад» — history.back(),
@@ -827,7 +1015,7 @@
   const nav = [{ tab: "search", cat: [], card: null, q: "", kind: "home", y: 0 }];
   let shownCat = null, shownCard = null, afterPop = null;
   const top = () => nav[nav.length - 1];
-  const sameScreen = (a, b) => a.tab === b.tab && a.card === b.card && a.q === b.q
+  const sameScreen = (a, b) => a.tab === b.tab && a.card === b.card && a.q === b.q && !!a.res === !!b.res
     && a.cat.length === b.cat.length && a.cat.every((n, i) => n === b.cat[i]);
   const url = (e) => (e.card ? `#/d/${e.card}` : location.pathname + location.search);
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";   // прокрутку возвращает show(), не браузер
@@ -880,12 +1068,14 @@
       });
       if (tab === "fav") renderFav();
       if (tab === "profile") renderProfile();
+      shownRec = null;
     } else if (closing) {                          // вернулись из карточки: звёздочку могли снять, история пополнилась
       if (tab === "fav") renderFav();
       if (tab === "profile") renderProfile();
     }
     catPath = e.cat;
     if (tab === "catalog" && shownCat !== catPath) renderCatalog();
+    if (tab === "recipe" && shownRec !== !!e.res) renderRecipe(!!e.res);
     if (input.value !== e.q) {
       input.value = e.q;
       clearTimeout(timer);
@@ -1023,6 +1213,7 @@
     openCatalog(b.dataset.g ? { type: "g", code: b.dataset.g } : { type: "s", code: b.dataset.s });
   }));
   tabs.search.querySelector("[data-all]").addEventListener("click", () => setTab("catalog"));
+  $("rx-open").addEventListener("click", () => { haptic(); openRecipe(); });
   document.querySelectorAll(".lang-sw button").forEach((b) => b.addEventListener("click", () => switchLang(b.dataset.lang)));
 
   renderList();
