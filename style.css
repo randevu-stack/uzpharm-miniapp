@@ -1,39 +1,55 @@
-/* Оформление «Чистый медицинский» (макет A, design/uzpharm): своя мятно-изумрудная палитра вместо цветов темы Telegram.
-   Тёмная тема — те же оттенки на тёмно-зелёном: класс .dark ставит app.js по tg.colorScheme, вне Telegram — система. */
+/* Оформление «Изумруд 2.0» (вариант A со стенда стилей, 30.10.2026): глубже изумруд, цена на тёмно-зелёной плашке.
+   Все пары «текст / фон» — от 4,5:1 по WCAG (крупная цена — от 3:1) в обеих темах. «По рецепту» и «Без рецепта»,
+   «Дороже» и «В норме» различаются не только цветом: заливкой, светлотой и значком (℞, ✕, ✓) — видно и при дальтонизме.
+   Тёмная тема: класс .dark ставит app.js по tg.colorScheme, вне Telegram — система. */
 :root {
   --bg: #ffffff;            /* карточки, поле поиска */
-  --bg2: #f4f7f6;           /* фон страницы */
-  --text: #0f1b17;
-  --hint: #6b7a75;
-  --link: #0b8a5f;
-  --accent: #0e9f6e;
+  --bg2: #f3f6f5;           /* фон страницы */
+  --text: #0e1a16;
+  --hint: #56655f;
+  --link: #047857;
+  --accent: #047857;
   --accent-text: #ffffff;
-  --chip: #e3f1ec;
-  --chip-text: #0b6e4d;
-  --line: #e4ebe8;
-  --ok: #0e9f6e;
-  --warn: #c2410c;
+  --chip: #e2f2eb;
+  --chip-text: #065f46;
+  --line: #e0e7e4;
+  --ok: #046c4e;
+  --warn: #b42318;
   --radius: 20px;
   --shadow: 0 4px 14px -8px rgba(15, 40, 30, .18);
   --hero-glow: #d7f1e7;
-  --memo: #0f2f26;
-  --memo-text: #eafff7;
-  --price-bg: linear-gradient(135deg, #0e9f6e, #0b7d58);
+  --memo: #0b2e25;
+  --memo-text: #e9fbf3;
+  --price-bg: #064e3b;      /* блок предельной цены */
+  --price-text: #ffffff;
+  --price-sub: #a7f3d0;
+  --rx-bg: #9a3412;         /* «По рецепту» — тёмная заливка со значком ℞ */
+  --rx-text: #ffffff;
+  --otc-bg: #e2f2eb;        /* «Без рецепта» — светлая */
+  --otc-text: #065f46;
+  --bad-bg: #fdecea;        /* «Дороже предельной» */
+  --bad-text: #b42318;
+  --ok-bg: #e3f4ec;         /* «В норме», «аналог дешевле» */
+  --ok-text: #046c4e;
   --img-outline: oklch(0 0 0 / .06);
   --press: cubic-bezier(.2, 0, 0, 1);
   color-scheme: light;
 }
 :root.dark {
-  --bg: #16201c; --bg2: #0e1512; --text: #e8f1ed; --hint: #8ea09a; --link: #3fd19c; --accent: #17a974;
-  --chip: #18302a; --chip-text: #7fe0bb; --line: #22302b; --shadow: none; --hero-glow: #12382c;
-  --memo: #173a30; --memo-text: #e6fff5; --price-bg: linear-gradient(135deg, #12a172, #0b7253);
+  --bg: #141d1a; --bg2: #0c1311; --text: #e6efeb; --hint: #93a39d; --link: #5edba8; --accent: #34d399; --accent-text: #062a1f;
+  --chip: #163029; --chip-text: #8ce7c3; --line: #24332e; --ok: #6ee7b7; --warn: #ff9c8f; --shadow: none; --hero-glow: #12382c;
+  --memo: #10372d; --memo-text: #e9fbf3; --price-bg: #0f3d30; --price-text: #f0fff8; --price-sub: #8ce7c3;
+  --rx-bg: #fdba8c; --rx-text: #431407; --otc-bg: #163029; --otc-text: #8ce7c3;
+  --bad-bg: #3b1714; --bad-text: #ff9c8f; --ok-bg: #10302a; --ok-text: #6ee7b7;
   --img-outline: oklch(1 0 0 / .08); color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not(.tg) {
-    --bg: #16201c; --bg2: #0e1512; --text: #e8f1ed; --hint: #8ea09a; --link: #3fd19c; --accent: #17a974;
-    --chip: #18302a; --chip-text: #7fe0bb; --line: #22302b; --shadow: none; --hero-glow: #12382c;
-    --memo: #173a30; --memo-text: #e6fff5; --price-bg: linear-gradient(135deg, #12a172, #0b7253);
+    --bg: #141d1a; --bg2: #0c1311; --text: #e6efeb; --hint: #93a39d; --link: #5edba8; --accent: #34d399; --accent-text: #062a1f;
+    --chip: #163029; --chip-text: #8ce7c3; --line: #24332e; --ok: #6ee7b7; --warn: #ff9c8f; --shadow: none; --hero-glow: #12382c;
+    --memo: #10372d; --memo-text: #e9fbf3; --price-bg: #0f3d30; --price-text: #f0fff8; --price-sub: #8ce7c3;
+    --rx-bg: #fdba8c; --rx-text: #431407; --otc-bg: #163029; --otc-text: #8ce7c3;
+    --bad-bg: #3b1714; --bad-text: #ff9c8f; --ok-bg: #10302a; --ok-text: #6ee7b7;
     --img-outline: oklch(1 0 0 / .08); color-scheme: dark;
   }
 }
@@ -129,24 +145,26 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .about { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
 .badge { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 9px; background: var(--bg); color: var(--hint); }
-.badge.rx { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
-.badge.otc { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.badge.rx { color: var(--rx-text); background: var(--rx-bg); }
+.badge.rx::before, .rx-tag.rx::before { content: "℞"; margin-right: 4px; font-weight: 800; }
+.badge.otc { color: var(--otc-text); background: var(--otc-bg); }
 .badge.uz { color: #2563eb; background: color-mix(in srgb, #2563eb 11%, transparent); }
 :root.dark .badge.uz { color: #7cb0ff; }
 .block { margin: 22px 16px; }
 .block .sec-h { padding: 0; }
 .price-wrap { margin-top: 16px; }
-.price { padding: 16px 18px; border-radius: 22px; background: var(--price-bg); color: #fff; box-shadow: 0 14px 30px -14px rgba(14, 159, 110, .7); }
-.price small { font-size: 13px; font-weight: 600; opacity: .85; }
+.price { padding: 16px 18px; border-radius: 22px; background: var(--price-bg); color: var(--price-text); box-shadow: 0 14px 30px -14px rgba(6, 78, 59, .55); }
+.price small { font-size: 13px; font-weight: 600; color: var(--price-sub); }
 .price > b { display: block; font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; }
-.price > b i { font-style: normal; font-size: 18px; opacity: .85; }
-.price-ok { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
+.price > b i { font-style: normal; font-size: 18px; color: var(--price-sub); }
+.price-ok { color: var(--price-sub); display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
 .price-ok svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .price.none { background: var(--bg); color: var(--text); box-shadow: none; border: 1px solid var(--line); }
 .price .price-none { font-size: 20px; letter-spacing: 0; }
+.price.none small { color: var(--hint); }   /* цены нет — светлый блок, подпись серая, а не мятная */
 .packs { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, .22); font-size: 13.5px; }
 .packs li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
-.packs span { opacity: .9; overflow-wrap: anywhere; }
+.packs span { color: var(--price-sub); overflow-wrap: anywhere; }
 .packs b { white-space: nowrap; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 16px 0; }
 .tiles > * { min-width: 0; padding: 10px 10px; border-radius: 16px; background: var(--bg); border: 1px solid var(--line); color: inherit;
@@ -172,7 +190,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .an b { font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .an small { font-size: 11.5px; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .an-p { margin-top: auto; padding-top: 4px; font-size: 13.5px; font-weight: 800; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.an-p em { font-style: normal; font-size: 11.5px; color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); padding: 1px 6px; border-radius: 999px; }
+.an-p em { font-style: normal; font-size: 11.5px; color: var(--ok-text); background: var(--ok-bg); padding: 1px 6px; border-radius: 999px; }
 
 /* панель карточки: круглые стеклянные кнопки поверх фото */
 .bar { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: none; pointer-events: none; }
@@ -192,7 +210,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .brand { display: flex; gap: 12px; align-items: center; }
 .brand b { display: block; font-size: 16px; }
 .brand small { display: block; font-size: 12.5px; color: var(--hint); font-variant-numeric: tabular-nums; }
-.logo { width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center; background: var(--accent); color: #fff; }
+.logo { width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center; background: var(--accent); color: var(--accent-text); }
 .logo svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .hero h1 { font-size: 29px; line-height: 1.12; letter-spacing: -.03em; margin: 20px 0 4px; }
 .home[hidden] { display: none; }
@@ -211,7 +229,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .cat-i svg { width: 30px; height: 30px; fill: currentColor; }
 .memo { display: flex; gap: 12px; align-items: center; margin: 18px 16px 0; padding: 14px; border-radius: 20px; background: var(--memo); color: var(--memo-text); }
 .memo b { font-size: 15px; }
-.memo p { font-size: 13px; opacity: .8; margin: 2px 0 0; line-height: 1.35; }
+.memo p { font-size: 13px; opacity: .88; margin: 2px 0 0; line-height: 1.35; }
 .memo-i { width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center; background: rgba(255, 255, 255, .12); }
 .memo-i svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .hint { color: var(--hint); font-size: 13px; margin: 8px 4px 0; }
@@ -223,17 +241,17 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 
 /* ---------- «аналог дешевле» и «поделиться» в карточке ---------- */
 .save { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--ok) 25%, transparent); border-radius: 18px; background: color-mix(in srgb, var(--ok) 9%, var(--bg)); color: inherit; font: inherit;
+  border: 1px solid color-mix(in srgb, var(--ok-text) 22%, transparent); border-radius: 18px; background: var(--ok-bg); color: inherit; font: inherit;
   text-align: left; cursor: pointer; transition: transform .12s var(--press); }
 .save:active { transform: scale(.98); }
-.save-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ok); color: #fff; }
+.save-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ok-text); color: var(--ok-bg); }
 .save-ico svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 .save-text { flex: 1; min-width: 0; }
-.save-text b { display: block; color: var(--ok); }
+.save-text b { display: block; color: var(--ok-text); }
 .save-text small { display: block; color: var(--hint); font-size: 13px; overflow-wrap: anywhere; }
 .save .pf-chev { color: var(--hint); font-size: 22px; }
 .save-tag { display: inline-block; margin-top: 2px; padding: 1px 7px; border-radius: 999px; font-weight: 600;
-  color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); font-variant-numeric: tabular-nums; }
+  color: var(--ok-text); background: var(--ok-bg); font-variant-numeric: tabular-nums; }
 .btn.share { width: 100%; margin-top: 12px; gap: 8px; background: var(--bg); color: var(--link); }
 .btn.share svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -319,7 +337,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .cat-sec h3, .picks-title { margin: 0 16px 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: var(--hint); }
 .picks { margin-top: 4px; }
 .picks .list { margin-bottom: 10px; }
-.thumb.sym { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--bg)); }
+.thumb.sym { color: var(--ok-text); background: var(--ok-bg); }
 .thumb.sym svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 
 /* ---------- карточка: ссылка на группу и инструкция ---------- */
@@ -346,8 +364,8 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 /* рецептурность в строке списка — под ценой, цветами как у меток в карточке */
 .rx-tag { display: block; width: fit-content; margin: 4px 0 0 auto; padding: 1px 7px; border-radius: 999px;
   font-size: 11px; font-weight: 600; white-space: nowrap; }
-.rx-tag.rx { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
-.rx-tag.otc { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.rx-tag.rx { color: var(--rx-text); background: var(--rx-bg); }
+.rx-tag.otc { color: var(--otc-text); background: var(--otc-bg); }
 
 /* ---------- короткие названия: марка крупно, форма и упаковка — строкой ниже ---------- */
 .item-form { display: block; color: var(--hint); font-size: 12.5px; line-height: 1.3; margin-top: 1px;
@@ -363,7 +381,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
   color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
   transition: transform .12s var(--press), background-color .15s ease-out, color .15s ease-out; }
 .fchip:active { transform: scale(.96); }
-.fchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .list > li.more-li { background: none; border: 0; box-shadow: none; }
 .more { width: 100%; min-height: 48px; border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius);
   background: none; color: var(--link); font: inherit; font-weight: 700; cursor: pointer; transition: transform .12s var(--press); }
@@ -385,10 +403,9 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .check-res { margin-top: 10px; padding: 10px 12px; border-radius: 12px; }
 .check-res b { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; line-height: 1.3; }
 .check-res b svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.check-res small { display: block; margin: 4px 0 0 28px; font-size: 13px; opacity: .85; }
-.check-res.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 11%, transparent); }
-.check-res.bad { color: #d92d20; background: color-mix(in srgb, #d92d20 10%, transparent); }
-:root.dark .check-res.bad { color: #ff8a80; }
+.check-res small { display: block; margin: 4px 0 0 28px; font-size: 13px; }
+.check-res.ok { color: var(--ok-text); background: var(--ok-bg); }
+.check-res.bad { color: var(--bad-text); background: var(--bad-bg); }
 
 /* ---------- профиль: язык ---------- */
 .pf-group.lang { padding: 12px; }
