@@ -20,7 +20,7 @@
   const FAV_CLOUD = "favs";          // ключ в Telegram CloudStorage: {v: [id…], t: время изменения}
   const FAV_MAX = 300;               // значение в CloudStorage — до 4096 символов, id ~6 символов
   const VIEWED_MAX = 30;
-  const BOT = "Uzpharmapp";          // @Uzpharmapp: ссылка «Поделиться» — t.me/<бот>?start=d_<id>, бот присылает карточку
+  const BOT = "dorinarxiapp";          // @dorinarxiapp: ссылка «Поделиться» — t.me/<бот>?start=d_<id>, бот присылает карточку
   const SAVE_MIN = 10;               // «аналог дешевле» показываем, если выгода от 10 %
 
   const $ = (id) => document.getElementById(id);
