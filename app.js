@@ -29,6 +29,7 @@
   const tabs = { search: $("tab-search"), catalog: $("tab-catalog"), fav: $("tab-fav"), profile: $("tab-profile"),
     recipe: $("tab-recipe") };   // «Проверить рецепт» — экран без кнопки внизу
 
+  let lastKey = 0;                   // время последнего ввода в поиск — индекс опечаток строим в паузах между ними
   let drugs = [], byId = new Map(), byInn = new Map(), byInfo = new Map(), diseases = [];
   let shopsDate = "";                               // на какую дату цены в аптеках (d.shop)
   let tab = "search";
@@ -203,7 +204,8 @@
   async function load() {
     try {
       // адрес с ?v=<хэш> вписывает build.py в <link id="data">; браузер начал качать его ещё при разборе страницы
-      const r = await fetch($("data").getAttribute("href"));
+      const href = $("data").getAttribute("href");
+      const r = await fetch(href);
       if (!r.ok) throw new Error(r.status);
       const data = await r.json();
       await pause();                                // разбор 4,6 МБ JSON — отдельной задачей, дальше — кусками
@@ -215,13 +217,16 @@
       // МНН — из словаря (~1 тыс. разных на 18 тыс. карточек): нормализуем каждое один раз, а не дважды на карточку
       const innNorm = (dicts.inn || []).map((x) => UzSearch.normalize(x));
       const innOk = (dicts.inn || []).map((x) => !NO_INN.test(x || ""));
+      // normalize() на 18 тыс. названий — ~0,9 с на дешёвом телефоне: считаем один раз на версию справочника и храним
+      const cached = store.get("names", null);
+      const names = cached && cached.v === href && cached.n.length === data.drugs.length ? cached.n : null;
       const list = [];
       for (let i = 0; i < data.drugs.length; i += CHUNK) {   // кусками, чтобы экран не замирал на телефоне
         if (i) await pause();
-        for (const a of data.drugs.slice(i, i + CHUNK)) list.push(toDrug(a));
+        for (let j = i; j < Math.min(i + CHUNK, data.drugs.length); j++) list.push(toDrug(data.drugs[j], j));
       }
       drugs = list;
-      function toDrug(a) {
+      function toDrug(a, j) {
         const d = {
           id: a[f.id], trade: a[f.name], inn: v(a, "inn"), form: v(a, "form"), dosage: v(a, "dosage"), maker: v(a, "maker"),
           rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: v(a, "expires"), photo: a[f.photo], level: v(a, "level"),
@@ -231,7 +236,7 @@
         d.prices = a[f.prices].map(([pack, retail]) => [pack === 0 ? d.trade : pack, retail]);   // 0 — как название
         // поля для search.js — как search_content в базе бота; normalize(название + " " + МНН) = обе части по отдельности
         const ii = dicts.inn ? a[f.inn] : -1, ninn = ii >= 0 ? innNorm[ii] || "" : UzSearch.normalize(d.inn);
-        d.name = UzSearch.normalize(d.trade);
+        d.name = names ? names[j] : UzSearch.normalize(d.trade);
         d.text = d.name && ninn ? `${d.name} ${ninn}` : d.name || ninn;
         d.rawLen = d.trade.length;
         // у ~3 тыс. карточек вместо МНН заглушка — по ней аналоги не ищем, иначе «аналогом» Цитрамона станет спирт
@@ -259,9 +264,15 @@
       if (tab === "recipe") renderRecipe(!!top().res);
       if (byId.has(startId)) open(startId);        // открыли по ссылке на препарат: «Назад» из карточки — на главную
       pullFavs();
-      // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
-      // кусками по ~2 тыс. карточек между кадрами — иначе это ещё одна «заморозка» на полсекунды прямо во время ввода
-      (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepareAsync(drugs, pause));
+      if (!names) setTimeout(() => store.set("names", { v: href, n: drugs.map((d) => d.name) }), 2000);
+      // индекс для поиска с опечатками (~1 с на дешёвом телефоне) строим заранее, но только пока человек НЕ печатает:
+      // по 500 карточек между кадрами и ждём, если последнее нажатие было меньше секунды назад. Опечатка до того,
+      // как индекс готов, всё равно найдётся — search() достроит его сам.
+      const calm = async () => {
+        await pause();
+        while (performance.now() - lastKey < 1000) await new Promise((r) => setTimeout(r, 250));
+      };
+      setTimeout(() => UzSearch.prepareAsync(drugs, calm, 500), 1500);
     } catch (e) {
       statusEl.textContent = T("loadError");
       statusEl.classList.add("warn");
@@ -1213,7 +1224,7 @@
     clearTimeout(timer);
     if (now) renderList(); else timer = setTimeout(renderList, 120);
   }
-  input.addEventListener("input", () => onQuery());
+  input.addEventListener("input", () => { lastKey = performance.now(); onQuery(); });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });   // спрятать клавиатуру
   // пустой экран поиска (примеры, группы, памятка) не зависит от данных — рисуем сразу, не дожидаясь справочника (~0,8 МБ)
   // открыли по ссылке на препарат: кнопка бота (?d=<id>) или ссылка t.me/<бот>/…?startapp=d_<id>
