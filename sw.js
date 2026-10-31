@@ -1,11 +1,11 @@
 /* Service worker мини-аппа: хранит сборку и справочник в телефоне, чтобы приложение открывалось без интернета
    и не качало catalog.json заново, пока он не поменялся.
    BUILD и PRECACHE вписывает miniapp/build.py: новая сборка — новый BUILD, файлы прошлой сборки удаляются.
-   Страница — сначала из сети (свежие цены), без сети — из кеша; файлы с ?v=<хэш> не меняются — сразу из кеша;
+   Страница — из кеша сразу, в фоне — свежая из сети (новую сборку подхватывает обновление service worker); файлы с ?v=<хэш> не меняются — сразу из кеша;
    фото — из кеша, последние PHOTO_MAX просмотренных. */
-const BUILD = "6f3ab633";
-const PRECACHE = ["./", "app.js?v=81916fa5", "i18n.js?v=b20b888d", "search.js?v=99d91a1a", "atc.js?v=e17f847e", "style.css?v=10885b01", "catalog.json?v=c0a097b8"];
-const APP = `app-${BUILD}`, PHOTOS = "photos", EXT = "ext";   // EXT — telegram-web-app.js и шрифт
+const BUILD = "19971b29";
+const PRECACHE = ["./", "app.js?v=1bb0ece4", "i18n.js?v=b20b888d", "search.js?v=465d1c63", "atc.js?v=e17f847e", "style.css?v=10885b01", "catalog.json?v=c0a097b8", "fonts/manrope-cyrillic.woff2", "fonts/manrope-latin.woff2"];
+const APP = `app-${BUILD}`, PHOTOS = "photos", EXT = "ext";   // EXT — telegram-web-app.js
 const PHOTO_MAX = 400;
 const PAGE_TIMEOUT = 4000;                                     // медленная сеть — через 4 с показываем сохранённое
 const PAGE = new URL("./", self.location).href;
@@ -29,11 +29,19 @@ function put(cacheName, key, res) {
 }
 
 async function page(req) {
-  // Telegram добавляет к адресу ?v=… и свои параметры — страница одна, храним её под одним ключом
+  // Telegram добавляет к адресу ?v=… и свои параметры — страница одна, храним её под одним ключом.
+  // Есть сохранённая — отдаём сразу, без ожидания сети (на мобильном интернете это до 4 с на каждом открытии),
+  // и обновляем её в фоне. Новая сборка всё равно приедет: браузер сверяет sw.js при каждом открытии, новый
+  // service worker берёт управление, и app.js перезагружает страницу, пока человек ничего не нажал.
   const net = fetch(req).then((res) => put(APP, PAGE, res));
+  const hit = await caches.match(PAGE);
+  if (hit) {
+    net.catch(() => {});
+    return hit;
+  }
   const timeout = new Promise((resolve) => setTimeout(resolve, PAGE_TIMEOUT));
   const res = await Promise.race([net.catch(() => null), timeout]);
-  return res || (await caches.match(PAGE)) || net;
+  return res || net;
 }
 
 async function cacheFirst(cacheName, req) {
@@ -66,6 +74,6 @@ self.addEventListener("fetch", (e) => {
     if (url.pathname.includes("/photos/")) return e.respondWith(cacheFirst(PHOTOS, req));
     return e.respondWith(cacheFirst(APP, req));
   }
-  // telegram-web-app.js и шрифт Manrope (Google Fonts) — из кеша, обновляются в фоне
-  if (["telegram.org", "fonts.googleapis.com", "fonts.gstatic.com"].includes(url.hostname)) return e.respondWith(staleWhileRevalidate(req));
+  // telegram-web-app.js — из кеша, обновляется в фоне
+  if (url.hostname === "telegram.org") return e.respondWith(staleWhileRevalidate(req));
 });

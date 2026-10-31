@@ -8,6 +8,9 @@
   const tg = window.Telegram && window.Telegram.WebApp;
   const inTelegram = !!(tg && tg.initData);
   const NO_INN = /^отсутствует утвержд[её]нное мнн$/i;
+  const CHUNK = 3000;                // карточек за один кусок разбора справочника
+  // отдать управление браузеру: отрисовать кадр, обработать нажатие — и продолжить
+  const pause = () => (window.scheduler && scheduler.yield ? scheduler.yield() : new Promise((r) => setTimeout(r)));
   const T = UzI18n.t;                // тексты интерфейса на текущем языке — i18n.js
   // разделы инструкции в порядке показа (ключи — как в реестре, см. INSTRUCTION_SECTIONS в uzpharm/db.py), названия — в i18n.js
   const SECTIONS = ["indication_for_use", "route_of_administration", "contraindication", "side_effect", "special_direction",
@@ -201,12 +204,22 @@
       const r = await fetch($("data").getAttribute("href"));
       if (!r.ok) throw new Error(r.status);
       const data = await r.json();
+      await pause();                                // разбор 4,6 МБ JSON — отдельной задачей, дальше — кусками
       const f = Object.fromEntries(data.fields.map((name, i) => [name, i]));
       const dicts = data.dicts || {};               // формат catalog.json — в miniapp/build.py
       const v = (a, name) => (dicts[name] ? dicts[name][a[f[name]]] : a[f[name]]);
       const shops = data.shops || {};               // безрецептурные: [от, до, аптек] в Ташкенте
       shopsDate = data.shopsDate || "";
-      drugs = data.drugs.map((a) => {
+      // МНН — из словаря (~1 тыс. разных на 18 тыс. карточек): нормализуем каждое один раз, а не дважды на карточку
+      const innNorm = (dicts.inn || []).map((x) => UzSearch.normalize(x));
+      const innOk = (dicts.inn || []).map((x) => !NO_INN.test(x || ""));
+      const list = [];
+      for (let i = 0; i < data.drugs.length; i += CHUNK) {   // кусками, чтобы экран не замирал на телефоне
+        if (i) await pause();
+        for (const a of data.drugs.slice(i, i + CHUNK)) list.push(toDrug(a));
+      }
+      drugs = list;
+      function toDrug(a) {
         const d = {
           id: a[f.id], trade: a[f.name], inn: v(a, "inn"), form: v(a, "form"), dosage: v(a, "dosage"), maker: v(a, "maker"),
           rx: !!a[f.rx], indefinite: !!a[f.indefinite], expires: v(a, "expires"), photo: a[f.photo], level: v(a, "level"),
@@ -214,15 +227,18 @@
           shelf: v(a, "shelf") || "", info: v(a, "info") || "", shop: shops[a[f.id]] || null,
         };
         d.prices = a[f.prices].map(([pack, retail]) => [pack === 0 ? d.trade : pack, retail]);   // 0 — как название
-        // поля для search.js — как search_content в базе бота
-        d.text = UzSearch.normalize([d.trade, d.inn].filter(Boolean).join(" "));
+        // поля для search.js — как search_content в базе бота; normalize(название + " " + МНН) = обе части по отдельности
+        const ii = dicts.inn ? a[f.inn] : -1, ninn = ii >= 0 ? innNorm[ii] || "" : UzSearch.normalize(d.inn);
         d.name = UzSearch.normalize(d.trade);
+        d.text = d.name && ninn ? `${d.name} ${ninn}` : d.name || ninn;
         d.rawLen = d.trade.length;
         // у ~3 тыс. карточек вместо МНН заглушка — по ней аналоги не ищем, иначе «аналогом» Цитрамона станет спирт
-        if (NO_INN.test(d.inn)) d.inn = "";
-        d.innKey = UzSearch.normalize(d.inn);
+        const ok = ii >= 0 ? innOk[ii] : !NO_INN.test(d.inn || "");
+        if (!ok) d.inn = "";
+        d.innKey = ok ? ninn : "";
         return d;
-      });
+      }
+      await pause();
       byId = new Map(drugs.map((d) => [d.id, d]));
       for (const d of drugs) {
         if (d.info) (byInfo.get(d.info) || byInfo.set(d.info, []).get(d.info)).push(d);
@@ -242,7 +258,8 @@
       if (byId.has(startId)) open(startId);        // открыли по ссылке на препарат: «Назад» из карточки — на главную
       pullFavs();
       // индекс для поиска с опечатками (~0,3 с на 18 тыс. карточек) строим заранее, пока человек ещё не печатает
-      (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepare(drugs));
+      // кусками по ~2 тыс. карточек между кадрами — иначе это ещё одна «заморозка» на полсекунды прямо во время ввода
+      (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => UzSearch.prepareAsync(drugs, pause));
     } catch (e) {
       statusEl.textContent = T("loadError");
       statusEl.classList.add("warn");

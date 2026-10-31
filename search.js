@@ -69,9 +69,16 @@
   const indexes = new WeakMap();
   function index(drugs) {
     let idx = indexes.get(drugs);
-    if (idx) return idx;
-    const wordDrugs = new Map(), gramWords = new Map();
-    for (const d of drugs) {
+    if (idx && idx.done === drugs.length) return idx;
+    idx = idx || { wordDrugs: new Map(), gramWords: new Map(), done: 0 };
+    addToIndex(idx, drugs, drugs.length);           // достроить то, что не успел prepareAsync
+    indexes.set(drugs, idx);
+    return idx;
+  }
+  function addToIndex(idx, drugs, upto) {
+    const { wordDrugs, gramWords } = idx;
+    for (; idx.done < upto; idx.done++) {
+      const d = drugs[idx.done];
       for (const w of new Set(d.text.split(" "))) {
         if (!wordDrugs.has(w)) {
           wordDrugs.set(w, []);
@@ -83,8 +90,17 @@
         wordDrugs.get(w).push(d);
       }
     }
-    idx = { wordDrugs, gramWords };
+  }
+  // То же, что index(), но кусками с паузами (pause() → Promise): на телефоне индекс строится ~0,4 с,
+  // одним куском это заметная «заморозка» прямо во время ввода. Поиск посреди стройки достроит индекс сам.
+  async function prepareAsync(drugs, pause, step) {
+    step = step || 2000;
+    const idx = indexes.get(drugs) || { wordDrugs: new Map(), gramWords: new Map(), done: 0 };
     indexes.set(drugs, idx);
+    while (idx.done < drugs.length) {
+      addToIndex(idx, drugs, Math.min(drugs.length, idx.done + step));
+      await pause();
+    }
     return idx;
   }
   function fuzzyCandidates(drugs, words) {
@@ -131,7 +147,7 @@
     return { items: scored.slice(0, limit).map((p) => p[1]), exact: false, total: Math.min(scored.length, limit) };
   }
 
-  const api = { normalize, search, sim, prepare: index, prio };
+  const api = { normalize, search, sim, prepare: index, prepareAsync, prio };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.UzSearch = api;
 })(typeof window !== "undefined" ? window : globalThis);
