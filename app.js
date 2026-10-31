@@ -326,9 +326,9 @@
     for (const d of base) counts.set(formCat(d), (counts.get(formCat(d)) || 0) + 1);
     if (filt.form && !counts.has(filt.form)) filt.form = "";
     let list = filt.form ? base.filter((d) => formCat(d) === filt.form) : base;
-    if (filt.cheap) {                              // дешевле — выше; Jurabek всё равно первым, без цены — в конце
-      list = list.map((d, i) => [d, i]).sort(([a, i], [b, j]) => UzSearch.prio(a) - UzSearch.prio(b)
-        || (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || i - j).map(([d]) => d);
+    if (filt.cheap) {                              // дешевле — выше, без цены — в конце
+      list = list.map((d, i) => [d, i]).sort(([a, i], [b, j]) => UzSearch.price(a) - UzSearch.price(b) || i - j)
+        .map(([d]) => d);
     }
     if (items.length > 5) statusEl.before(filterBar(counts, base.length));
     const active = filt.form || filt.uz || filt.otc;
@@ -566,13 +566,12 @@
     fact(T("route"), d.route);
     fact(T("reg"), d.indefinite ? T("regForever") : T("regUntil", { d: date(d.expires) }));
 
-    // аналоги: сначала Jurabek Laboratories, затем дешевле, затем по названию
+    // аналоги: дешевле — первыми, без цены — в конце, затем по названию
     const analogs = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id)
-      .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b)
-        || (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
+      .sort((a, b) => UzSearch.price(a) - UzSearch.price(b) || a.trade.localeCompare(b.trade, "ru"));
 
     // выгода: только та же форма и дозировка, цена за штуку; показываем в сумах за упаковку открытого препарата
-    // («дешевле на 63 000 сум» понятнее, чем «−63 %»); среди выгодных первым — Jurabek, как в списке аналогов
+    // («дешевле на 63 000 сум» понятнее, чем «−63 %»); из выгодных — тот, где экономия больше
     const mp = unitPack(d);
     const saves = new Map();
     if (mp) {
@@ -582,7 +581,7 @@
       }
     }
     const best = analogs.filter((a) => saves.has(a.id))
-      .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b) || saves.get(b.id).sum - saves.get(a.id).sum)[0];
+      .sort((a, b) => saves.get(b.id).sum - saves.get(a.id).sum)[0];
 
     // аналоги: лента карточек вбок; «Списком» — все строками, с выгодой в %
     let analogBlock = null;
@@ -702,7 +701,7 @@
     // своей инструкции в реестре нет — честно говорим и даём инструкцию препарата с тем же веществом и формой
     const form = UzSearch.normalize(d.form);
     const donor = (byInn.get(d.innKey) || []).filter((a) => a.info && UzSearch.normalize(a.form) === form)
-      .sort((a, b) => (sameDose(a, d) ? 0 : 2) + UzSearch.prio(a) - (sameDose(b, d) ? 0 : 2) - UzSearch.prio(b))[0];
+      .sort((a, b) => (sameDose(a, d) ? 0 : 1) - (sameDose(b, d) ? 0 : 1))[0];
     sec.append(el("p", { class: "hint", text: T("instrNone") }));
     if (donor) {
       sec.append(el("button", { class: "save donor", type: "button", onclick: () => open(donor.id) },
@@ -742,7 +741,7 @@
   }
 
   // ---------- каталог: группа АТХ → подгруппа → вещество → препараты; плюс подбор по симптому и заболеванию ----------
-  const byPrio = (a, b) => UzSearch.prio(a) - UzSearch.prio(b) || a.trade.localeCompare(b.trade, "ru");
+  const byPrice = (a, b) => UzSearch.price(a) - UzSearch.price(b) || a.trade.localeCompare(b.trade, "ru");   // дешевле — выше
   const inAtc = (prefixes) => (d) => prefixes.some((p) => d.atc.startsWith(p));
   const count = (n) => UzI18n.count(n, ["препарат", "препарата", "препаратов"]);
 
@@ -795,11 +794,11 @@
     } else if (node.type === "dis") {
       title = node.dis.name;
       sub = T("disSub", { code: node.dis.code });
-      body = [el("ul", { class: "list" }, ...node.dis.drugs.slice().sort(byPrio).map((d) => row(d)))];
+      body = [el("ul", { class: "list" }, ...node.dis.drugs.slice().sort(byPrice).map((d) => row(d)))];
     } else if (node.type === "list") {
       title = node.title;
       sub = `${node.sub} · ${count(node.list.length)}`;
-      body = [el("ul", { class: "list" }, ...node.list.slice().sort(byPrio).map((d) => row(d)))];
+      body = [el("ul", { class: "list" }, ...node.list.slice().sort(byPrice).map((d) => row(d)))];
     }
     $("catalog-body").replaceChildren(
       el("header", { class: "top cat-top" },
@@ -864,7 +863,7 @@
     if (!ka || !kd) return sameDose(a, d);
     return ka === kd && formCat(a) === formCat(d) && slowRelease(a) === slowRelease(d);
   };
-  // аналог дешевле: то же вещество, форма и дозировка, цена за штуку; среди выгодных Jurabek первым, как в карточке.
+  // аналог дешевле: то же вещество, форма и дозировка, цена за штуку; из выгодных — самый дешёвый.
   // Тот же препарат того же производителя в другой фасовке — не аналог
   function cheaperAnalog(d) {
     const mine = refUnit(d);
@@ -873,7 +872,7 @@
     const list = (byInn.get(d.innKey) || []).filter((a) => a.id !== d.id && sameRecipeDose(a, d)
       && !(a.maker === d.maker && UzSearch.normalize(splitName(a).brand) === brand))
       .map((a) => ({ a, u: refUnit(a) })).filter((x) => x.u && (1 - x.u / mine) * 100 >= SAVE_MIN);
-    list.sort((x, y) => UzSearch.prio(x.a) - UzSearch.prio(y.a) || x.u - y.u);
+    list.sort((x, y) => x.u - y.u);
     return list[0] ? { a: list[0].a, pct: Math.round((1 - list[0].u / mine) * 100), unit: list[0].u } : null;
   }
   // разбор одной позиции рецепта
