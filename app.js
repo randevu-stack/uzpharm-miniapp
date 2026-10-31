@@ -137,10 +137,12 @@
   const date = (s) => (s && s.length >= 10 ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : "—");
   const minPrice = (d) => d.prices.reduce((m, p) => (p[1] && (m == null || p[1] < m) ? p[1] : m), null);
   // цена за штуку — по «№28» в названии упаковки; без количества сравнивать пачки нечестно (10 шт. против 30)
-  const unitPrice = (d) => d.prices.reduce((m, [pack, retail]) => {
+  // самая выгодная упаковка: цена за штуку u и сколько штук n — чтобы считать выгоду в сумах за упаковку
+  const unitPack = (d) => d.prices.reduce((m, [pack, retail]) => {
     const n = Number((/№\s*(\d+)/.exec(pack) || [])[1]);
-    return retail && n && (m == null || retail / n < m) ? retail / n : m;
+    return retail && n && (m == null || retail / n < m.u) ? { u: retail / n, n } : m;
   }, null);
+  const unitPrice = (d) => unitPack(d)?.u ?? null;
   const sameDose = (a, b) => UzSearch.normalize(a.form) === UzSearch.normalize(b.form)
     && UzSearch.normalize(a.dosage) === UzSearch.normalize(b.dosage);
   const plural = (n, one, few, many) => {
@@ -267,7 +269,7 @@
   }
 
   // ---------- строки списков ----------
-  function row(d, withStar, save) {               // save — на сколько % аналог дешевле открытого препарата
+  function row(d, withStar, save) {               // save — на сколько сум аналог дешевле открытого препарата (за его упаковку)
     const p = minPrice(d);
     const { brand, rest } = splitName(d);
     const item = el("button", { class: "item", type: "button", onclick: () => open(d.id) },
@@ -276,7 +278,7 @@
         rest ? el("span", { class: "item-form", text: rest }) : null,
         el("span", { class: "item-sub", text: d.maker, title: d.maker })),   // под названием — сразу производитель
       el("span", { class: "item-price" }, p ? el("b", { text: num(p) }) : d.shop ? el("b", { text: T("shopFrom", { n: num(d.shop[0]) }) }) : null,
-        save ? el("span", { class: "save-tag", text: `−${save} %` }) : p || d.shop ? T("sum") : T(d.rx ? "noPrice" : "freePrice"),
+        save ? el("span", { class: "save-tag", text: `−${sum(save.sum)}` }) : p || d.shop ? T("sum") : T(d.rx ? "noPrice" : "freePrice"),
         el("span", { class: d.rx ? "rx-tag rx" : "rx-tag otc", text: d.rx ? T("rx") : T("otc") })));
     return el("li", { class: withStar ? "with-star" : "" }, item, withStar ? favButton(d, "row-star") : null);
   }
@@ -569,18 +571,18 @@
       .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b)
         || (minPrice(a) ?? Infinity) - (minPrice(b) ?? Infinity) || a.trade.localeCompare(b.trade, "ru"));
 
-    // выгода: только та же форма и дозировка, цена за штуку; среди выгодных первым — Jurabek, как в списке аналогов
-    const mine = unitPrice(d);
+    // выгода: только та же форма и дозировка, цена за штуку; показываем в сумах за упаковку открытого препарата
+    // («дешевле на 63 000 сум» понятнее, чем «−63 %»); среди выгодных первым — Jurabek, как в списке аналогов
+    const mp = unitPack(d);
     const saves = new Map();
-    if (mine) {
+    if (mp) {
       for (const a of analogs) {
         const u = sameDose(a, d) && unitPrice(a);
-        const pct = u ? Math.round((1 - u / mine) * 100) : 0;
-        if (pct >= SAVE_MIN) saves.set(a.id, pct);
+        if (u && (1 - u / mp.u) * 100 >= SAVE_MIN) saves.set(a.id, { sum: Math.round((mp.u - u) * mp.n), n: mp.n });
       }
     }
     const best = analogs.filter((a) => saves.has(a.id))
-      .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b) || saves.get(b.id) - saves.get(a.id))[0];
+      .sort((a, b) => UzSearch.prio(a) - UzSearch.prio(b) || saves.get(b.id).sum - saves.get(a.id).sum)[0];
 
     // аналоги: лента карточек вбок; «Списком» — все строками, с выгодой в %
     let analogBlock = null;
@@ -592,7 +594,7 @@
         return el("button", { class: "an", type: "button", onclick: () => open(a.id) }, t,
           el("b", { text: splitName(a).brand }), el("small", { class: "an-form", text: splitName(a).rest }), el("small", { text: a.maker }),
           el("span", { class: "an-p" }, ap ? sum(ap) : a.shop ? T("shopFrom", { n: sum(a.shop[0]) }) : T(a.rx ? "noPrice" : "freePrice"),
-            saves.has(a.id) ? el("em", { text: `−${saves.get(a.id)} %` }) : null));
+            saves.has(a.id) ? el("em", { text: `−${sum(saves.get(a.id).sum)}` }) : null));
       }));
       const all = el("button", { class: "sec-link", type: "button", text: analogs.length > 1 ? T("asList") : "" });
       analogBlock = el("section", { class: "block analogs" },
@@ -609,8 +611,8 @@
       el("section", { class: "block price-wrap" }, price, p ? priceCheck(d) : null,
         best ? el("button", { class: "save", type: "button", onclick: () => open(best.id) },
           el("span", { class: "save-ico" }, svg(ICO.save)),
-          el("span", { class: "save-text" }, el("b", { text: T("saveTitle", { p: saves.get(best.id) }) }),
-            el("small", { text: T("saveText", { name: splitName(best).brand }) })),
+          el("span", { class: "save-text" }, el("b", { text: T("saveTitle", { s: sum(saves.get(best.id).sum) }) }),
+            el("small", { text: T("saveText", { name: splitName(best).brand, n: saves.get(best.id).n }) })),
           el("span", { class: "pf-chev", text: "›" })) : null),
       tiles,
       analogBlock,
@@ -989,7 +991,7 @@
           el("span", { class: "rx-alt-row" }, el("b", { text: splitName(a).brand }),
             el("span", { text: ap.kind === "shop" ? T("shopFrom", { n: num(ap.price) }) : num(ap.price) })),
           el("span", { class: "rx-alt-sub", text: `${splitName(a).rest} · ${a.maker}` }),
-          el("em", { class: "rx-pct", text: T("rxCheaper", { p: x.best.pct }) }));
+          x.save ? el("em", { class: "rx-pct", text: T("rxCheaper", { s: sum(x.save) }) }) : null);
       } else {
         alt = el("p", { class: "hint rx-best", text: T(x.ref ? "rxIsBest" : "rxNoCompare") });
       }
