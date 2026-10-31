@@ -31,7 +31,7 @@
   --bad-text: #b42318;
   --ok-bg: #e3f4ec;         /* «В норме», «аналог дешевле» */
   --ok-text: #046c4e;
-  --img-outline: oklch(0 0 0 / .06);
+  --img-outline: oklch(0 0 0 / .1);
   --press: cubic-bezier(.2, 0, 0, 1);
   color-scheme: light;
 }
@@ -41,7 +41,7 @@
   --memo: #10372d; --memo-text: #e9fbf3; --price-bg: #0f3d30; --price-text: #f0fff8; --price-sub: #8ce7c3;
   --rx-bg: #fdba8c; --rx-text: #431407; --otc-bg: #163029; --otc-text: #8ce7c3;
   --bad-bg: #3b1714; --bad-text: #ff9c8f; --ok-bg: #10302a; --ok-text: #6ee7b7;
-  --img-outline: oklch(1 0 0 / .08); color-scheme: dark;
+  --img-outline: oklch(1 0 0 / .1); color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not(.tg) {
@@ -50,7 +50,7 @@
     --memo: #10372d; --memo-text: #e9fbf3; --price-bg: #0f3d30; --price-text: #f0fff8; --price-sub: #8ce7c3;
     --rx-bg: #fdba8c; --rx-text: #431407; --otc-bg: #163029; --otc-text: #8ce7c3;
     --bad-bg: #3b1714; --bad-text: #ff9c8f; --ok-bg: #10302a; --ok-text: #6ee7b7;
-    --img-outline: oklch(1 0 0 / .08); color-scheme: dark;
+    --img-outline: oklch(1 0 0 / .1); color-scheme: dark;
   }
 }
 * { box-sizing: border-box; }
@@ -131,6 +131,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .pic { position: relative; display: grid; place-items: center; min-height: 260px; margin-top: -56px; padding: 64px 16px 36px;
   background: linear-gradient(180deg, var(--hero-glow), var(--bg2)); }
 .pic img { width: 200px; height: 200px; object-fit: contain; border-radius: 22px; background: #fff;
+  outline: 1px solid var(--img-outline); outline-offset: -1px;
   box-shadow: 0 24px 40px -22px rgba(15, 60, 45, .45); }
 .pic-none { width: 120px; height: 120px; border-radius: 30px; display: grid; place-items: center; background: var(--bg); color: var(--accent); }
 .pic-none svg { width: 56px; height: 56px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -256,7 +257,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .save { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--ok-text) 22%, transparent); border-radius: 18px; background: var(--ok-bg); color: inherit; font: inherit;
   text-align: left; cursor: pointer; transition: transform .12s var(--press); }
-.save:active { transform: scale(.98); }
+.save:active { transform: scale(.96); }
 .save-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ok-text); color: var(--ok-bg); }
 .save-ico svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 .save-text { flex: 1; min-width: 0; }
@@ -388,17 +389,18 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 
 /* ---------- фильтры поиска: форма выпуска, «дешевле», «Сделано в UZ», «Без рецепта» ---------- */
 .filters { margin: 0 0 4px; }
-.frow { display: flex; gap: 8px; overflow-x: auto; padding: 2px 16px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.frow { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .frow::-webkit-scrollbar { display: none; }
-.fchip { flex: none; min-height: 36px; padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg);
+.fchip { position: relative; flex: none; min-height: 36px; padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg);
   color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
   transition: transform .12s var(--press), background-color .15s ease-out, color .15s ease-out; }
+.fchip::after { content: ""; position: absolute; inset: -4px 0; }   /* зона нажатия 44 px в высоту; по бокам — зазор 8 px */
 .fchip:active { transform: scale(.96); }
 .fchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .list > li.more-li { background: none; border: 0; box-shadow: none; }
 .more { width: 100%; min-height: 48px; border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius);
   background: none; color: var(--link); font: inherit; font-weight: 700; cursor: pointer; transition: transform .12s var(--press); }
-.more:active { transform: scale(.98); }
+.more:active { transform: scale(.96); }
 
 /* ---------- «Мне продают дороже?» ---------- */
 .check { margin-top: 10px; padding: 14px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); }
@@ -424,7 +426,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .rx-cta { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); margin: 16px 16px 0; padding: 14px;
   border: 0; border-radius: 20px; background: var(--price-bg); color: var(--price-text); text-align: left; font: inherit; cursor: pointer;
   box-shadow: 0 14px 30px -16px rgba(6, 78, 59, .55); transition: transform .15s var(--press); }
-.rx-cta:active { transform: scale(.98); }
+.rx-cta:active { transform: scale(.96); }
 .rx-cta-i { width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center; background: rgba(255, 255, 255, .14); }
 .rx-cta-i svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .rx-cta-t { flex: 1; min-width: 0; }
@@ -440,8 +442,10 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .rx-list { display: flex; flex-direction: column; gap: 10px; margin: 0 16px; }
 .rx-item { padding: 12px 12px 12px 14px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .rx-item-h { display: flex; gap: 10px; align-items: flex-start; }
-.rx-del { flex: none; display: grid; place-items: center; width: 34px; height: 34px; margin: -4px -4px 0 0; border: 0; border-radius: 50%;
-  background: var(--bg2); color: var(--hint); cursor: pointer; }
+.rx-del { position: relative; flex: none; display: grid; place-items: center; width: 34px; height: 34px; margin: -4px -4px 0 0; border: 0;
+  border-radius: 50%; background: var(--bg2); color: var(--hint); cursor: pointer; transition: transform .12s var(--press); }
+.rx-del::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; }   /* зона нажатия 44×44 */
+.rx-del:active { transform: scale(.96); }
 .rx-del svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
 .rx-paid-box { margin-top: 10px; height: 44px; }
 .rx-paid { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 16px; font-weight: 700; }
@@ -450,7 +454,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .rx-go { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 32px); min-height: 52px; margin: 16px 16px 0;
   border: 0; border-radius: 16px; background: var(--accent); color: var(--accent-text); font: inherit; font-size: 16px; font-weight: 800;
   cursor: pointer; transition: transform .15s var(--press); }
-.rx-go:active { transform: scale(.98); }
+.rx-go:active { transform: scale(.96); }
 .rx-go.off { background: var(--chip); color: var(--chip-text); }
 .rx-go svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .rx-sum { margin: 0 16px 12px; }
@@ -467,7 +471,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .rx-over-total { margin: 0 16px 12px; }
 .rx-alt { display: block; width: 100%; margin-top: 10px; padding: 10px 12px; border: 0; border-radius: 14px; background: var(--ok-bg);
   color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: transform .15s var(--press); }
-.rx-alt:active { transform: scale(.98); }
+.rx-alt:active { transform: scale(.96); }
 .rx-alt small { display: block; font-size: 12px; color: var(--ok-text); font-weight: 600; }
 .rx-alt-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 2px; font-size: 15px; }
 .rx-alt-row span { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; }
