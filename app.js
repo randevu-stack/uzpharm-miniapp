@@ -212,7 +212,7 @@
       const f = Object.fromEntries(data.fields.map((name, i) => [name, i]));
       const dicts = data.dicts || {};               // формат catalog.json — в miniapp/build.py
       const v = (a, name) => (dicts[name] ? dicts[name][a[f[name]]] : a[f[name]]);
-      const shops = data.shops || {};               // безрецептурные: [от, до, аптек] в Ташкенте
+      const shops = data.shops || {};               // без предельной цены: [от, до, аптек], до = 0 — известна только «от»
       shopsDate = data.shopsDate || "";
       // МНН — из словаря (~1 тыс. разных на 18 тыс. карточек): нормализуем каждое один раз, а не дважды на карточку
       const innNorm = (dicts.inn || []).map((x) => UzSearch.normalize(x));
@@ -544,14 +544,15 @@
 
     // цена: одна упаковка — крупно; несколько — крупно минимальная и список упаковок
     // безрецептурным предельную цену не назначают (с 01.04.2025) — так и пишем, а не «не установлена»
-    const p = minPrice(d), free = !p && !d.rx, shop = free && d.shop;
-    // есть цены аптек — разброс «от–до» на зелёном блоке, как настоящая цена; нет — честно «свободная»
+    const p = minPrice(d), free = !p && !d.rx, shop = !p && d.shop;
+    // нет предельной, но есть цены аптек — «от–до» (или «от») на зелёном блоке, как настоящая цена; нет — честно «свободная»
     const price = shop
       ? el("section", { class: "price shop" },
         el("small", { text: T("shopLabel") }),
-        el("b", null, shop[0] === shop[1] ? num(shop[0]) : `${num(shop[0])} – ${num(shop[1])}`, el("i", { text: " " + T("sum") })),
+        el("b", null, !shop[1] ? T("shopFrom", { n: num(shop[0]) }) : shop[0] === shop[1] ? num(shop[0]) : `${num(shop[0])} – ${num(shop[1])}`,
+          el("i", { text: " " + T("sum") })),
         el("span", { class: "price-ok" }, T("shopCount", { n: shop[2], s: plural(shop[2], "аптеке", "аптеках", "аптеках"), date: date(shopsDate) })),
-        el("p", { class: "price-note", text: T("shopNote") }))
+        el("p", { class: "price-note", text: T(d.rx ? "shopNoteRx" : shop[1] ? "shopNote" : "shopNoteFrom") }))
       : el("section", { class: "price" + (p ? "" : " none") },
         el("small", { text: free ? T("priceFreeLabel") : d.prices.length > 1 && p ? T("priceFrom") : T("price") }),
         p ? el("b", null, num(p), el("i", { text: " " + T("sum") })) : el("b", { class: "price-none", text: T(free ? "priceFree" : "priceNone") }),
@@ -856,11 +857,11 @@
   let recipe = store.get("recipe", []), shownRec = null;
   const saveRecipe = () => store.set("recipe", recipe);
   const packN = (s) => Number((/№\s*(\d+)/.exec(s || "") || [])[1]) || 0;
-  // цена для сравнения: предельная (самая дешёвая упаковка) или «от» в аптеках для безрецептурных
+  // цена для сравнения: предельная (самая дешёвая упаковка) или «от» в аптеках, если предельной нет
   function refPrice(d) {
     const pk = d.prices.filter(([, r]) => r).sort((a, b) => a[1] - b[1])[0];
     if (pk) return { price: pk[1], n: packN(pk[0]), kind: "limit" };
-    if (!d.rx && d.shop) return { price: d.shop[0], n: packN(d.trade), kind: "shop" };
+    if (d.shop) return { price: d.shop[0], n: packN(d.trade), kind: "shop" };
     return null;
   }
   const refUnit = (d) => { const r = refPrice(d); return r && r.n ? r.price / r.n : null; };
@@ -893,7 +894,7 @@
     const out = { d, ref, paid, over: 0, aboveShops: 0, best: cheaperAnalog(d), save: 0 };
     // переплату считаем от самой дорогой упаковки карточки: лучше промолчать, чем зря обвинить аптеку
     if (paid && limits.length && paid > Math.max(...limits)) out.over = paid - Math.max(...limits);
-    else if (paid && !limits.length && !d.rx && d.shop && paid > d.shop[1]) out.aboveShops = paid - d.shop[1];
+    else if (paid && !limits.length && d.shop && d.shop[1] && paid > d.shop[1]) out.aboveShops = paid - d.shop[1];
     if (out.best && ref && ref.n) out.save = Math.max(0, Math.round((paid || ref.price) - out.best.unit * ref.n));
     return out;
   }
@@ -988,7 +989,7 @@
     const cards = lines.map((x) => {
       const { brand, rest } = splitName(x.d);
       const priceLine = x.ref && x.ref.kind === "limit" ? T("rxLimit", { s: sum(x.ref.price) })
-        : !x.d.rx && x.d.shop ? T("rxShops", { a: num(x.d.shop[0]), b: sum(x.d.shop[1]) })
+        : x.d.shop ? (x.d.shop[1] ? T("rxShops", { a: num(x.d.shop[0]), b: sum(x.d.shop[1]) }) : T("rxShopsFrom", { s: sum(x.d.shop[0]) }))
           : T(x.d.rx ? "rxNoLimit" : "rxFree");
       const flag = x.over ? el("p", { class: "rx-flag bad" }, svg(ICO.x), T("rxOver", { d: sum(x.over) }))
         : x.aboveShops ? el("p", { class: "rx-flag warn" }, svg(ICO.info), T("rxAboveShops", { d: sum(x.aboveShops) }))
