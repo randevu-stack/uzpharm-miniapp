@@ -5,6 +5,7 @@
    системный жест, «‹ Назад» и свайп вправо снимают верхний. Приложение закрывается только с главной. */
 (function () {
   "use strict";
+  if (document.documentElement.classList.contains("outside")) return;   // не в Telegram — заглушка (index.html)
   const tg = window.Telegram && window.Telegram.WebApp;
   const inTelegram = !!(tg && tg.initData);
   const NO_INN = /^отсутствует утвержд[её]нное мнн$/i;

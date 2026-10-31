@@ -3,8 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Справочник лекарств Узбекистана</title>
+  <title>Dori narxi — справочник лекарств</title>
+  <meta name="robots" content="noindex, nofollow">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    // приложение — только в Telegram: в обычном браузере вместо справочника заглушка со ссылкой на бота,
+    // и справочник (catalog.json) не качаем. Telegram передаёт initData; если его скрипт не загрузился —
+    // те же данные есть в адресе (#tgWebAppData=…). localhost — для разработки
+    (function () {
+      var w = window.Telegram && window.Telegram.WebApp;
+      var tg = !!(w && w.initData) || /tgWebAppData=/.test(location.hash);
+      if (!tg && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+        document.documentElement.className = "outside";
+        return;
+      }
+      var l = document.createElement("link");   // справочник качается сразу, параллельно со скриптами;
+      l.id = "data"; l.rel = "preload"; l.as = "fetch"; l.crossOrigin = "anonymous";   // build.py добавляет ?v=<хэш>
+      l.href = "catalog.json?v=962d69fe";
+      document.head.appendChild(l);
+    })();
+  </script>
   <!-- Manrope (OFL) лежит у нас: без лишнего похода на Google Fonts, который держал первый показ ~1 с.
        Шрифт вариативный — один файл на все начертания 500–800; латиница качается, только если она есть на экране -->
   <link rel="preload" href="fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -14,11 +32,16 @@
     @font-face { font-family: "Manrope"; font-style: normal; font-weight: 500 800; font-display: swap;
       src: url(fonts/manrope-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
   </style>
-  <link rel="stylesheet" href="style.css?v=acccc9e9">
-  <!-- справочник качается сразу, параллельно со скриптами; build.py добавляет ?v=<хэш>, адрес берёт app.js -->
-  <link id="data" rel="preload" href="catalog.json?v=962d69fe" as="fetch" crossorigin>
+  <link rel="stylesheet" href="style.css?v=a145fc5b">
 </head>
 <body>
+  <!-- заглушка: открыли не в Telegram (см. скрипт в head) -->
+  <section id="outside" class="outside-box">
+    <span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
+    <h1>Dori narxi</h1>
+    <p>Справочник цен на лекарства работает в Telegram.<br>Dori narxlari ma’lumotnomasi Telegram’da ishlaydi.</p>
+    <a class="outside-btn" href="https://t.me/dorinarxiapp">Открыть в Telegram</a>
+  </section>
   <main id="app">
     <!-- вкладка «Поиск» -->
     <section id="tab-search" class="tab">
@@ -132,6 +155,6 @@
   <script src="i18n.js?v=74fd6048"></script>
   <script src="search.js?v=674682e5"></script>
   <script src="atc.js?v=e17f847e"></script>
-  <script src="app.js?v=8811d3cc"></script>
+  <script src="app.js?v=7bec9fba"></script>
 </body>
 </html>

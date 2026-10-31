@@ -482,3 +482,16 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .rx-note { margin: 4px 20px 0; }
 .rx-edit { width: calc(100% - 32px); margin: 10px 16px 24px; }
 .rx-sugg .item-form, .rx-item .item-form, .rx-card .item-form { white-space: normal; display: block; -webkit-line-clamp: unset; overflow: visible; }   /* дозировку и фасовку видно целиком: по ним и выбирают */
+
+/* заглушка вне Telegram (index.html): вместо приложения — логотип и ссылка на бота */
+.outside-box { display: none; }
+.outside body > :not(.outside-box) { display: none !important; }
+.outside .outside-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  min-height: 100svh; padding: 24px 16px; box-sizing: border-box; text-align: center; }
+.outside-box h1 { margin: 4px 0 0; font-size: 28px; text-wrap: balance; }
+.outside-box p { margin: 0; max-width: 340px; color: var(--hint); line-height: 1.5; text-wrap: pretty; }
+.outside-box .logo { width: 64px; height: 64px; border-radius: 20px; }
+.outside-box .logo svg { width: 34px; height: 34px; }
+.outside-btn { margin-top: 8px; padding: 14px 22px; border-radius: 14px; background: var(--accent); color: var(--accent-text);
+  font-weight: 700; text-decoration: none; transition-property: scale; transition-duration: .15s; }
+.outside-btn:active { scale: .96; }
